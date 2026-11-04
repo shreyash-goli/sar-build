@@ -55,6 +55,14 @@ test.describe("Response checklist (runbook)", () => {
     const clip = await page.evaluate(() => navigator.clipboard.readText());
     expect(clip).toBe(runbook.steps[0]!.copyText);
     expect(clip).toContain("Manual step: FailSafe does not perform this automatically.");
+
+    // Whole checklist: title, each step numbered exactly once, disclaimer last.
+    await rb.getByRole("button", { name: "Copy whole checklist" }).click();
+    const all = await page.evaluate(() => navigator.clipboard.readText());
+    expect(all.startsWith(runbook.title)).toBe(true);
+    for (const s of runbook.steps) expect(all).toContain(s.copyText);
+    expect(all).not.toMatch(/^\d+\.\s+\d+\.\s/m);
+    expect(all.trimEnd().endsWith(runbook.disclaimer)).toBe(true);
   });
 
   test("unknown-data incident shows an unassigned owner rather than guessing", async ({ page, request }) => {

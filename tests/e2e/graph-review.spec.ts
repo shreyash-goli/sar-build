@@ -73,9 +73,16 @@ test.describe("Graph edge inspector and review", () => {
     await expect(inspector(page)).toHaveAttribute("data-edge-id", HERO_EDGE);
     await page.keyboard.press("Escape");
     await expect(inspector(page)).toHaveCount(0);
+    // Focus returns to the edge that opened the inspector.
+    await expect(edge).toBeFocused();
 
-    await page.locator(`[data-inspect-edge="${HERO_EDGE}"]`).first().click();
+    const listButton = page.locator(`[data-inspect-edge="${HERO_EDGE}"]`).first();
+    await listButton.click();
     await expect(inspector(page)).toHaveAttribute("data-edge-id", HERO_EDGE);
+    // Closing with the close button returns focus to the text-list trigger.
+    await inspector(page).getByRole("button", { name: "Close edge inspector" }).click();
+    await expect(inspector(page)).toHaveCount(0);
+    await expect(listButton).toBeFocused();
   });
 
   test("confirming MetricsRelay's suggested edge makes it solid and adds growth reporting to confirmed impact", async ({

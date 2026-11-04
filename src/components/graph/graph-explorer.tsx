@@ -119,7 +119,33 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
   const [reviews, setReviews] = React.useState<Set<ReviewStatus>>(() => new Set(DEFAULT_REVIEW_FILTER));
   const [announcement, setAnnouncement] = React.useState("");
   const [inspectedEdgeId, setInspectedEdgeId] = React.useState<string | null>(null);
-  const closeInspector = React.useCallback(() => setInspectedEdgeId(null), []);
+  // What opened the inspector (text-list button or focused edge) and for which edge,
+  // so closing with Escape / the close button returns focus there (a11y).
+  const inspectorOpenerRef = React.useRef<{ el: HTMLElement | null; edgeId: string } | null>(null);
+  const openInspector = React.useCallback((edgeId: string) => {
+    const active = document.activeElement as HTMLElement | null;
+    // Ignore re-selection events fired while focus is already inside the inspector.
+    const insideInspector = !!active?.closest('[data-testid="edge-inspector"]');
+    if (!insideInspector) {
+      inspectorOpenerRef.current = { el: active && active !== document.body ? active : null, edgeId };
+    }
+    setInspectedEdgeId(edgeId);
+  }, []);
+  const closeInspector = React.useCallback(() => {
+    const opener = inspectorOpenerRef.current;
+    inspectorOpenerRef.current = null;
+    setInspectedEdgeId(null);
+    // After React removes the drawer, restore focus to the trigger, else to the edge itself.
+    window.setTimeout(() => {
+      if (opener?.el && opener.el.isConnected) {
+        opener.el.focus();
+        if (document.activeElement === opener.el) return;
+      }
+      if (opener?.edgeId) {
+        document.querySelector<HTMLElement>(`[data-testid="rf__edge-${CSS.escape(opener.edgeId)}"]`)?.focus();
+      }
+    }, 0);
+  }, []);
 
   const visible = React.useMemo(() => applyFilters(graph, { kinds, reviewStatuses: reviews }), [graph, kinds, reviews]);
   // Blast radius always uses the full graph: filters change what is drawn, never what is true.
@@ -247,7 +273,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
   // Edge selection (click or Enter on a focused edge) opens the inspector.
   const onEdgesChange = (changes: EdgeChange<FsEdge>[]) => {
     const picked = changes.find((c) => c.type === "select" && c.selected);
-    if (picked && "id" in picked) setInspectedEdgeId(picked.id);
+    if (picked && "id" in picked) openInspector(picked.id);
   };
 
   // Keyboard (Enter on a focused node) and mouse selection both arrive here.
@@ -316,7 +342,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
   }, [inspectedEdge, flow]);
 
   const inspectEdge = (edgeId: string) => {
-    setInspectedEdgeId(edgeId);
+    openInspector(edgeId);
     document.getElementById("graph-canvas")?.scrollIntoView({ block: "nearest" });
   };
 
@@ -444,7 +470,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onEdgeClick={(_e, edge) => setInspectedEdgeId(edge.id)}
+            onEdgeClick={(_e, edge) => openInspector(edge.id)}
             onPaneClick={() => {
               if (inspectedEdgeId) setInspectedEdgeId(null);
               else if (selectedId) select(null);

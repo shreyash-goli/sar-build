@@ -46,7 +46,8 @@ function useCopy() {
 export function RunbookChecklist({ runbook }: { runbook: Runbook }) {
   const { copy, copiedId } = useCopy();
   const titleById = new Map(runbook.steps.map((s, i) => [s.id, `${i + 1}. ${s.title}`]));
-  const allText = runbook.steps.map((s, i) => `${i + 1}. ${s.copyText}`).join("\n\n");
+  // copyText already starts with "N. " (from the runbook rules), so join as-is.
+  const allText = [runbook.title, ...runbook.steps.map((s) => s.copyText), runbook.disclaimer].join("\n\n");
 
   return (
     <section
