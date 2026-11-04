@@ -20,6 +20,7 @@ import { CATEGORY_LABEL, dueLabel, formatDayUtc, graphHref, vendorNodeId } from 
 import { cn } from "@/lib/utils";
 import { AMOUNT_TONE_CLASS, incidentAmountDisplay } from "./amount";
 import { ConfidenceText, SeverityBadge, SignalPill, StatusBadge } from "./pills";
+import { RunbookChecklist } from "./runbook-checklist";
 
 const sourceHref = (evidenceId: string) => `/sources?source=${encodeURIComponent(evidenceId)}`;
 
@@ -303,6 +304,8 @@ export function IncidentDetailView({ incident }: { incident: IncidentDetail }) {
           </ul>
         </section>
       ) : null}
+
+      <RunbookChecklist runbook={incident.runbook} />
 
       {incident.resolution === "SUBJECT_NO_LONGER_EVALUATED" ? (
         <p role="status" className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-muted">

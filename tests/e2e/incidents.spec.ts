@@ -55,7 +55,9 @@ test.describe("Incidents", () => {
 
     await page.goto("/incidents/inc-charge-computeharbor-20261121");
     await expect(page.getByTestId("incident-amount")).toHaveText("No shortfall · $10,200.00 headroom");
-    await expect(page.getByTestId("incident-detail")).not.toContainText("Unknown");
+    // The amount is never "Unknown" for a covered charge. (The runbook may still list "Still unknown"
+    // caveats, e.g. vendor-side retries, which are legitimate and unrelated to the amount.)
+    await expect(page.getByTestId("incident-amount")).not.toHaveText(/Unknown/);
   });
 
   test("filters and search query the engine output", async ({ page, request }) => {
