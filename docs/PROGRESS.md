@@ -1,12 +1,13 @@
 # Progress
 
 ## Now
-- FS-05 — evidence ledger & Sources page (QA FAIL on e2e setup race + demo-off chip copy; fixes in progress)
-- FS-07 — dependency graph UI (@frontend) + GET /api/graph (@backend, done, awaiting QA)
-- FS-11 — risk engine & incidents (@backend, in progress)
+- FS-07 — dependency graph UI (@frontend polish: edge labels, side panel) → QA → commit (backend half committed in 71cc33f)
+- FS-12 — Overview dashboard (backend QA PASS, Lows being fixed; @frontend UI drafted)
+- FS-13 — incident detail (backend QA PASS, Lows being fixed; UI next)
+- FS-14 — simulation engine + Response Studio (@backend started)
 
 ## Next
-- FS-12 after FS-11 + FS-01; FS-08 after FS-07
+- FS-08 after FS-07; FS-15 after FS-14; FS-16 after FS-15; FS-17 after FS-12–FS-16
 - FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
 
 ## Done
@@ -19,6 +20,8 @@
 - FS-04 — Northstar seed & reset (commit 0bd17d0)
 - FS-10 — charge/fund projection (commit 911ce62)
 - FS-06 — graph algorithms (commit 810eb35; FS-05 dependency is documentation-only — code does not import FS-05)
+- FS-11 — risk engine & incidents (commit 9a0cf99; committed before FS-05 because FS-05 tests read FS-11 rule evidence)
+- FS-05 — evidence ledger & Sources inspector, incl. FS-07 graph API backend (commit 71cc33f)
 
 ## Blockers
 - None
@@ -118,3 +121,23 @@
 - QA: PASS with 1 Medium (unbounded DFS when no terminal reachable: 3.4s on 56-node mesh) + 3 Low → fixed (now 1 ms) → re-verify PASS.
 - Limitations: simple-path enumeration is bounded, not exhaustive, on dense graphs (truncation is flagged).
 - Commit: 810eb35
+
+## FS-11 — 2026-11-04
+- Status: PASS
+- Implemented: src/lib/risk/classify.ts evaluateRisk (rules projected-shortfall-v1, observed-decline-v1, risk-severity-v1): section 5 ladder over confirmed paths through the vendor; severity ≠ confidence (weakest driving edge tier; capped at MEDIUM when availability stale; capped at LOW with limitation + mapping request when the fund→vendor payment link is not confirmed); no confirmed path → UNKNOWN; >14 days → LOW labeled "outside the 14-day scoring window; monitoring". OBSERVED_DECLINE is a separate incident: "vendor service impact unconfirmed… not a confirmed outage"; SPEND_LIMIT labeled local demo terminology. src/lib/incidents materializeIncidents: stable incidentKey/scenarioKey, idempotent (unchanged rerun writes nothing), snapshotJson with evaluation/impact/evidence, append-only RULE/DERIVED evidence per evaluation fingerprint; status transitions documented (re-open on escalation with previousSeverity). Seed/reset regenerate incidents through the engine in-transaction. PathIdSchema (max 4096).
+- Files: src/lib/risk/**, src/lib/incidents/{materialize,status,index}.ts, src/lib/schema/risk.ts, src/lib/demo/northstar.ts, tests/unit/{risk,schema}.test.ts, tests/integration/{incidents,seed}.test.ts.
+- Commands: pnpm test 460/460; risk+incidents 45; lint; tsc; demo:reset regenerated 4 incidents; db:seed rerun 0 changes; two resets byte-identical dumps; isolated committed tree tsc + 362/362.
+- Evidence: CloudComms CRITICAL/HIGH $450 PROJECTED_SHORTFALL citing login + checkout path IDs; WebhookWorks HIGH/MEDIUM OBSERVED_DECLINE; ComputeHarbor LOW (margin $10,200); MetricsRelay UNKNOWN with requested mappings.
+- QA: PASS with 1 Medium (rejected/suggested payment edge still scored HIGH confidence) + 3 Low → fixed → re-verify PASS (probe: PAYS REJECTED/SUGGESTED and BACKS REJECTED → CRITICAL/LOW with caveat).
+- Limitations: one incident per declined transaction; healthy charges materialize as MONITORING/LOW rows (UI must not count them as alerts); confidence for NO_RISK derives from graph edge tiers.
+- Commit: 9a0cf99
+
+## FS-05 — 2026-11-04
+- Status: PASS
+- Implemented: evidence resolvers for all subject types; ledger (supported assertions, totals, unresolved refs, rule lineage CURRENT/SUPERSEDED/NOT_APPLICABLE with recordedRule, DEMO DATA badge on derived evidence from demo inputs); GET /api/sources[/id] (strict validation, 400/404/503, generic 500); category definitions; /sources page with filters, deep-linkable inspector (supported assertions, demo-vs-verified trust summary, lineage), unresolved warning, loading/empty/error. Shell: chip from stored workspace mode with "Demo mode off · read-only" hint, honest freshness from latest evidence capturedAt, shared resolveDemoClock. E2E: per-port DB prepared in the webServer command (db:deploy + demo:reset), reuseExistingServer false. Includes FS-07 backend half (GET /api/graph, loadGraph, vendor needsMapping) because sources.test exercises it and it depends on the ledger schema.
+- Files: src/lib/provenance/{index,definitions,ledger-schema,ledger}.ts, src/app/api/_lib/{http,sources,graph}.ts, src/app/api/{sources,graph}/**, src/lib/graph/{schema,load,index}.ts, src/app/(app)/{layout.tsx,sources/**}, src/components/{evidence,layout}/**, playwright.config.ts, tests/e2e/{sources,shell}.spec.ts, tests/integration/{sources,graph-api}.test.ts, tests/unit/{definitions,shell-status,shell-freshness}.test.ts.
+- Commands: pnpm test 462/462 (main tree); lint; typecheck; build; e2e 43/43 on a clean run (QA); committed tree in isolation tsc + 420/420 + lint.
+- UX evidence: inspector for ev-edge-vendor-cloudcomms--service-otp-gateway shows "CloudComms POWERS OTP gateway", Confirmed, DEMO DATA, "Demo / mock data… Unverified"; no RAMP_DOCUMENTED anywhere; overflow 0 at 320/390/768/1024/1280px; DEMO_MODE=false with seeded DB shows DEMO DATA + read-only hint.
+- QA: initial FAIL (High: Playwright starts webServer before globalSetup, which deleted the open e2e.db → 30/34 fail; Medium: "Nothing shown is live or demo data" above 49 demo records) → fixed → re-verify PASS (43/43). Ledger add-on (superseded lineage, demo-input badge) PASS.
+- Limitations: freshness lists all evidence per request (fine at demo scale); e2e shell.spec in this commit asserts /graph as a data route, which the FS-07 UI commit completes; graph API + Sources share this commit.
+- Commit: 71cc33f

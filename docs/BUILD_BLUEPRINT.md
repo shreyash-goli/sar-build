@@ -465,7 +465,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Two resets yield the same logical IDs, amounts, edge counts and provenance; hero charge is 245000 cents and available is 200000 cents.  
 **Verify:** `pnpm db:seed && pnpm demo:reset && pnpm test -- fixtures`.
 
-### [ ] FS-05 — Build evidence ledger and source inspector
+### [x] FS-05 — Build evidence ledger and source inspector
 **Depends on:** FS-04.  
 **Build:** Backend functions that resolve any node/edge/charge/incident to its evidence; Sources page listing evidence class, source ID, original excerpt/path, timestamp, review status, and rule lineage. Add user-readable definitions for synthetic versus observed versus derived.  
 **Files:** `src/lib/provenance/**`, `src/app/(app)/sources/page.tsx`, `src/components/evidence/**`.  
@@ -509,7 +509,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Hero returns `expected=245000`, `available=200000`, `shortfall=45000`, `dueInDays=2` with source IDs. Scenario D returns `UNKNOWN` (not $0).  
 **Verify:** unit tests for exact hero, missing available, unknown billing, negative/refund, wrong billing period, timezone edge.
 
-### [ ] FS-11 — Implement explainable risk engine and incident builder
+### [x] FS-11 — Implement explainable risk engine and incident builder
 **Depends on:** FS-06, FS-10.  
 **Build:** Classify projected shortfalls and observed declines, compute reachable confirmed workflows, provide severity + confidence + reason codes, dedupe alerts by stable `incidentKey`, materialize incidents and evidence snapshots. Do not conflate observed decline with confirmed service outage.  
 **Files:** `src/lib/risk/**`, `src/lib/incidents/**`, `tests/unit/risk.test.ts`.  
