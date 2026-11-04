@@ -1,11 +1,12 @@
 # Progress
 
 ## Now
-- FS-05 — evidence ledger & Sources page (@backend API done, @frontend page in progress)
-- FS-10 — charge/fund projection (@backend, in progress)
+- FS-05 — evidence ledger & Sources page (QA FAIL on e2e setup race + demo-off chip copy; fixes in progress)
+- FS-07 — dependency graph UI (@frontend) + GET /api/graph (@backend, done, awaiting QA)
+- FS-11 — risk engine & incidents (@backend, in progress)
 
 ## Next
-- FS-06 after FS-05; FS-11 after FS-06 + FS-10
+- FS-12 after FS-11 + FS-01; FS-08 after FS-07
 - FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
 
 ## Done
@@ -16,6 +17,8 @@
 - FS-03 — persistent normalized database (commit 6d82325)
 - fix(graph) — verified evidence for every confirmed edge (commit f002912)
 - FS-04 — Northstar seed & reset (commit 0bd17d0)
+- FS-10 — charge/fund projection (commit 911ce62)
+- FS-06 — graph algorithms (commit 810eb35; FS-05 dependency is documentation-only — code does not import FS-05)
 
 ## Blockers
 - None
@@ -95,3 +98,23 @@
 - Limitations: rule lineage/incidents regenerate only once FS-11/FS-14 exist; shell still to switch to resolveDemoClock (in progress with FS-05 frontend); after fixture changes an existing dev.db needs one `pnpm demo:reset` before `db:seed` (drift guard by design).
 - Commit: 0bd17d0
 - Next: FS-05, FS-10
+
+## FS-10 — 2026-11-03
+- Status: PASS
+- Implemented: src/lib/forecast — projectCharge/projectCharges (rule projected-shortfall-v1) with gates: vendor, CARD billing, funding source, amount, date, known availability, same billing period across UTC-12..+14 in 15-minute steps (else AMBIGUOUS → UNKNOWN), past-due, prior-charge billing; unknown → UNKNOWN_DATA listing every requested mapping, shortfall null (never $0). Only CARD priors deducted. Availability from the future → UNKNOWN; >7 days old → stale assumption. suggestRecurringCharges (rule recurring-charge-suggestion-v1): ≥3 cleared positive charges with non-rejected non-model evidence and consistent cadence; integer median; stale → UNKNOWN; displayLabel "Suggested from history".
+- Files: src/lib/forecast/{period,projection,recurring,index}.ts, tests/unit/forecast.test.ts.
+- Commands: pnpm test -- forecast 40/40; pnpm test 362/362; lint; tsc.
+- Evidence: hero SCORED expected 245000, available 200000, shortfall 45000, dueInDays 2, inputs [ev-charge-cloudcomms-20261119, ev-vendor-cloudcomms, ev-fund-auth]; +60000 → shortfall 0, margin 15000; Scenario C shortfall 0; Scenario D UNKNOWN_DATA [BILLING_METHOD, FUNDING_SOURCE].
+- QA: PASS with 1 Medium (UNKNOWN-billed priors inflated shortfall to 145000) + 4 Low → fixed → re-verify PASS.
+- Limitations: DAILY-interval funds are rarely scorable (no workspace timezone modeled); "verified" recurring history = not REJECTED and not MODEL_SUGGESTED evidence (UNVERIFIED fixture/observed counts); stale-threshold 7 days is a documented constant.
+- Commit: 911ce62
+
+## FS-06 — 2026-11-03
+- Status: PASS
+- Implemented: src/lib/graph — enumeratePaths/computeBlastRadius: confirmed-only gating via countsAsConfirmed, REJECTED never followed, SUGGESTED only in separate possible set; deterministic path IDs; edge/evidence IDs per path; weakest dependency strength → POTENTIAL_INTERRUPTION / POTENTIAL_DEGRADATION / MINOR_DEPENDENCY wording; workflows deduped with path counts; sort by criticality, length, ID; reverse-reachability pruning + maxDepth/maxPaths/maxSteps (50k) with per-set truncated/depthLimited flags; dangling edges reported.
+- Files: src/lib/graph/{traverse,impact,index}.ts, tests/unit/graph.test.ts.
+- Commands: graph tests PASS; pnpm test 362/362; lint; tsc; committed tree verified in isolation (tsc OK, 320/320).
+- Evidence: fund-auth → Account login (4 HARD edges) and Customer checkout (+DEGRADED edge) with exact path IDs; WebhookWorks → On-call escalation; MetricsRelay confirmed empty, Weekly growth reporting only possible.
+- QA: PASS with 1 Medium (unbounded DFS when no terminal reachable: 3.4s on 56-node mesh) + 3 Low → fixed (now 1 ms) → re-verify PASS.
+- Limitations: simple-path enumeration is bounded, not exhaustive, on dense graphs (truncation is flagged).
+- Commit: 810eb35

@@ -474,7 +474,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 
 ## Phase B — The novel graph and deterministic intelligence
 
-### [ ] FS-06 — Implement graph algorithms as pure functions
+### [x] FS-06 — Implement graph algorithms as pure functions
 **Depends on:** FS-05.  
 **Build:** Directed traversal, cycle protection, confirmed-only reachability, graph path reconstruction, sorted impacted workflows, and separate suggested-path output. Handle nodes with no outgoing edges and multi-path dependencies.  
 **Files:** `src/lib/graph/traverse.ts`, `src/lib/graph/impact.ts`, `tests/unit/graph.test.ts`.  
@@ -502,7 +502,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Importing the included sample suggests an edge with `MODEL_SUGGESTED` or `MANIFEST_DETECTED` evidence; it doesn't affect confirmed risk until reviewed.  
 **Verify:** parser fixture tests for known dependency, no dependency, malformed input, oversize input, duplication.
 
-### [ ] FS-10 — Build charge and available-fund projection logic
+### [x] FS-10 — Build charge and available-fund projection logic
 **Depends on:** FS-04.  
 **Build:** Read normalized VendorCharge, FundingSource and Transaction objects; implement funding-method guardrails, date comparison against injected clock, known-available check, minor-unit arithmetic, and recurring-charge suggestions only where sufficiently evidenced. Render forecast sparkline for historical sample charges if desired.  
 **Files:** `src/lib/forecast/**`, `tests/unit/forecast.test.ts`.  
