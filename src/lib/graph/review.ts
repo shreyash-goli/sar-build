@@ -39,8 +39,10 @@ export async function reviewEdge(repos: Repositories, edgeId: string, req: EdgeR
   let evidence: EvidenceRecord;
   if (req.decision === "CONFIRM") {
     const [workspace] = await repos.workspaces.list();
-    // A human review in the fictional demo workspace is still about demo data.
-    const classification: SourceClass = workspace?.mode === "DEMO" ? "DEMO_FIXTURE" : "EXTERNAL_OBSERVED";
+    // A reviewer's attestation is first-party, not third-party (EXTERNAL_OBSERVED). In the fictional
+    // demo workspace it is still about demo data (DEMO_FIXTURE); elsewhere the closest allowed class for
+    // MANUAL is UNKNOWN, and kind MANUAL + USER_VERIFIED carries the meaning "a person confirmed this".
+    const classification: SourceClass = workspace?.mode === "DEMO" ? "DEMO_FIXTURE" : "UNKNOWN";
     const reviewId = randomUUID();
     evidence = await repos.evidence.create({
       id: `ev-review-${edgeId}-${reviewId.slice(0, 8)}`,

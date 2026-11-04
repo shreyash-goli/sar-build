@@ -118,6 +118,21 @@ describe("CONFIRM", () => {
   });
 });
 
+describe("CONFIRM outside the DEMO workspace", () => {
+  it("classifies the reviewer attestation as UNKNOWN (never EXTERNAL_OBSERVED); MANUAL + USER_VERIFIED carry the meaning", async () => {
+    const { createRepositories } = await import("@/lib/repositories");
+    const raw = createRepositories(db, { writeGate: () => undefined, demoResetGate: () => undefined });
+    const [ws] = await raw.workspaces.list();
+    await raw.workspaces.update(ws!.id, { mode: "RAMP_SANDBOX" });
+    const { data } = Envelope.parse(await (await review({ decision: "CONFIRM", reviewer: "growth-lead", justification })).json());
+    expect(data.evidence).toMatchObject({ kind: "MANUAL", classification: "UNKNOWN", verificationStatus: "USER_VERIFIED" });
+    expect(data.edge.reviewStatus).toBe("CONFIRMED");
+    // A USER_VERIFIED edge is confirmed; the UNKNOWN classification is still flagged for review in display metadata.
+    const g = await buildGraphData(repos);
+    expect(g.evidence[data.evidence.id]).toMatchObject({ classification: "UNKNOWN", kind: "MANUAL", verificationStatus: "USER_VERIFIED" });
+  });
+});
+
 describe("REJECT", () => {
   it("sets REJECTED, keeps the evidence, removes the possible impact, and audits", async () => {
     const res = await review({ decision: "REJECT", reviewer: "growth-lead", justification: "Weekly report no longer uses analytics." });
