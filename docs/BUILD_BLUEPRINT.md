@@ -518,28 +518,28 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 
 ## Phase C — Complete usable product
 
-### [ ] FS-12 — Ship executive Overview dashboard
+### [x] FS-12 — Ship executive Overview dashboard
 **Depends on:** FS-11, FS-01.  
 **Build:** Overview KPIs from DB, clear definitions, ranked upcoming payment exposures, tiny forecast visualization, top impacted workflows, source freshness, click-through to incident/graph. Source-mode chip must always be visible.  
 **Files:** `src/app/(app)/dashboard/page.tsx`, `src/app/api/dashboard/**`, components/tests.  
 **Done when:** Every number comes from engine results, not hardcoded JSX; changing a fixture and re-seeding changes the right totals.  
 **Verify:** dashboard API tests and screenshot at desktop/mobile breakpoints.
 
-### [ ] FS-13 — Deliver investigator-grade incident detail
+### [x] FS-13 — Deliver investigator-grade incident detail
 **Depends on:** FS-12, FS-08.  
 **Build:** Incident list/search/filter; detail screen with timeline, exposure, precise calculation, dependency chain, possible impacts separately, evidence panel, confidence caveats, owner, and “Open Response Studio.” Include `FORECAST` vs `OBSERVED DECLINE` pill.  
 **Files:** `src/app/(app)/incidents/**`, `src/components/risks/**`, incident API.  
 **Done when:** A judge can independently reconstruct where $450 came from, and understand that no service has been shown to be suspended.  
 **Verify:** UI test opening incident and reading source path, calculation, and caveat.
 
-### [ ] FS-14 — Build the counterfactual simulation engine + UI
+### [x] FS-14 — Build the counterfactual simulation engine + UI
 **Depends on:** FS-11, FS-13.  
 **Build:** `POST /api/scenarios/run` with Zod validation; use immutable cloned state; support `INCREASE_AVAILABLE_ALLOCATION` and `ASSIGN_ALTERNATE_FUND` at minimum. Add side-by-side before/after results and graph path highlighting. Log simulation, never mutate base funding values.  
 **Files:** `src/lib/simulations/**`, `src/app/(app)/scenarios/page.tsx`, API, tests.  
 **Done when:** +$600 adjustment changes available from $2,000 to modeled $2,600, shortfall from $450 to $0, and leaves base FundingSource unchanged. An invalid change returns 400.  
 **Verify:** simulation unit tests, API integration test, click-through on UI.
 
-### [ ] FS-15 — Add approval-gated response actions and immutable audit trail
+### [x] FS-15 — Add approval-gated response actions and immutable audit trail
 **Depends on:** FS-14.  
 **Build:** Propose change, present rationale, require reviewer confirmation, transition `DRAFT → PENDING_APPROVAL → APPROVED_FOR_DEMO` or `REJECTED`, record every transition. Server enforces allowed transitions; duplicate approvals are idempotent. Show a bold `SIMULATION ONLY: No Ramp funds changed` message.  
 **Files:** `src/lib/actions/**`, `src/app/api/actions/**`, audit timeline component/tests.  

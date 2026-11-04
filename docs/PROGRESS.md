@@ -1,14 +1,13 @@
 # Progress
 
 ## Now
-- FS-12 — Overview dashboard (backend QA PASS, Lows being fixed; @frontend UI drafted)
-- FS-13 — incident detail (backend QA PASS, Lows being fixed; UI next)
-- FS-14 — Response Studio UI (@frontend, after FS-13); backend committed 90c9099
-- FS-15 — approval-gated actions + audit trail (@backend in progress)
+- FS-08 — graph inspector & reviewer controls UI (@frontend); backend committed a8e37ef
+- FS-16 — runbook checklist UI on incident detail (@frontend, after FS-08); backend committed d31ede2
+- FS-09 — manifest import (backend done, QA queued); UI later
+- FS-17 — demo reset API (@backend); then hero Playwright golden path + README/demo docs
 
 ## Next
-- FS-08 after FS-07; FS-15 after FS-14; FS-16 after FS-15; FS-17 after FS-12–FS-16
-- FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
+- FS-17 MVP lock (after FS-08, FS-16 UI) → then optional FS-18–FS-23 (FS-18/19 need credentials/keys → BLOCKED unless provided)
 
 ## Done
 - FS-00 — runnable repository (commit c7ec96f)
@@ -24,7 +23,14 @@
 - FS-05 — evidence ledger & Sources inspector, incl. FS-07 graph API backend and per-port e2e DB (commit 71cc33f)
 - FS-14 backend — simulation engine + scenarios API (commit 90c9099)
 - FS-07 — dependency graph UI (commit 9c3c961)
-- FS-05 inspector follow-up — lineage status + demo-input trust line (commit fb1a416)
+- FS-05 inspector follow-up — lineage status + demo-input trust line (commit fb1a416); trust-summary unit tests (6919fc6)
+- FS-14 limit-wording fix (5855016); fix(actions) 8cef304; fix(graph) fee02f2; fix(simulation) a220725
+- FS-15 backend — approval actions + audit trail (commit f69c9d0)
+- FS-08 backend — suggested-edge review API (commit a8e37ef)
+- FS-16 backend — runbook rules module (commit d31ede2; wired into incident detail in 6afda58)
+- FS-12 — Overview dashboard (commit fecd3dd)
+- FS-13 — incident list & detail (commit 6afda58)
+- FS-14 UI + FS-15 UI — Response Studio with approvals (commit 83e38ee)
 
 ## Blockers
 - None
@@ -164,3 +170,39 @@
 - QA: PASS with 2 Low (7px edge labels; panel below fold) → fixed → final PASS. Side panel deliberately not used (would drop fit zoom to ≈0.5).
 - Limitations: no risk colouring until incidents are wired into the graph; REQUIRES pill slightly overlaps OTP node border (cosmetic).
 - Commit: 9c3c961 (+ inspector follow-up fb1a416)
+
+## FS-15 backend / FS-08 backend / FS-16 backend — 2026-11-04
+- FS-15 backend (f69c9d0): ActionProposal lifecycle DRAFT→PENDING_APPROVAL→APPROVED_FOR_DEMO|REJECTED enforced server-side (409 with from/to); idempotent repeats write no audit (T-18); invalid transitions 409 (T-19); required approver ≠ proposer; rationale ≥10 chars; payload feasibility via FS-14 engine; one append-only AuditEvent per transition recording executedExternally=false; rationale/notes live only in the audit trail (no migration). QA PASS; full-DB dump hash unchanged apart from proposal/audit/simulation rows. Follow-up 8cef304: unreadable audit trail → 500 ACTION_AUDIT_UNREADABLE; simulatedAt.
+- FS-08 backend (a8e37ef): POST /api/graph/edges/:id/review; CONFIRM creates new USER_VERIFIED MANUAL evidence from the human justification (prior evidence untouched, nothing invented) and confirms the edge; REJECT keeps evidence; audit per decision; risk re-materialized in-transaction; only SUGGESTED reviewable (409). QA PASS. Follow-up fee02f2: non-DEMO confirmations classified UNKNOWN, never EXTERNAL_OBSERVED.
+- FS-16 backend (d31ede2): buildRunbook rule runbook-v1 per category with owners from graph nodes ("Unassigned" when none), dependencies, unknowns, automatic=false, copyable text and disclaimer "FailSafe does not contact vendors, move money or change card limits". QA PASS on all four seeded runbooks.
+
+## FS-12 — 2026-11-04
+- Status: PASS
+- Implemented: loadDashboard / GET /api/dashboard; KPIs from engine incidents only (at-risk workflows 2, unresolved exposures 2, potential shortfall $450.00 + 1 unquantified, never summed as $0), each with definition + contributing incident IDs; MONITORING/LOW never counted; ranked exposures, covered vendors, top workflows, per-vendor forecast, freshness, resultsEvaluatedAt/lastChangedAt. /dashboard UI with definitions disclosures, links to incidents/graph, Recharts forecast with table alternative.
+- Files: src/lib/dashboard/**, src/app/api/{_lib/dashboard.ts,dashboard/**}, src/app/(app)/dashboard/**, src/components/dashboard/**, tests/integration/dashboard.test.ts, tests/e2e/dashboard.spec.ts, tests/unit/dashboard-format.test.ts.
+- Commands: pnpm test 554; lint; typecheck; e2e 63/63 clean (QA); isolated committed tree tsc + lint + 510/510; fixture-change tests move totals (100000 → $1,450; 260000 → $0).
+- QA: backend PASS (2 Low fixed) → UI PASS → final re-verify PASS.
+- Commit: fecd3dd
+
+## FS-13 — 2026-11-04
+- Status: PASS
+- Implemented: loadIncidents/loadIncident + GET /api/incidents[/id] (signal pill, filters, calculation steps, chains with evidence, possible impacts separate, owners, verbatim caveats, projected timeline, runbook); UI list with alerts vs muted "Healthy, monitoring only"; detail answering "where the $450 came from" ($2,450.00 − $2,000.00) with caveats "whether the vendor would suspend service is unknown"; decline "not a confirmed outage"; NO_RISK "No shortfall · $10,200.00 headroom".
+- Files: src/lib/incidents/{schema,load}.ts, src/app/api/{_lib/incidents.ts,incidents/**}, src/app/(app)/incidents/**, src/components/risks/**, src/lib/forecast/projection.ts (availabilityObservedAt), tests/integration/incidents-api.test.ts, tests/e2e/incidents.spec.ts, tests/unit/incident-amount.test.ts, tests/e2e/shell.spec.ts.
+- Commands: e2e 63/63 clean (QA); isolated committed tree tsc + lint + 529/529.
+- QA: backend PASS (2 Low fixed) → UI PASS (2 Low fixed) → final PASS.
+- Limitations: unknown incident page renders not-found UI with HTTP 200 (streamed route; API returns 404); incident status cannot be changed from the UI (no write API).
+- Commit: 6afda58
+
+## FS-14 UI + FS-15 UI — 2026-11-04
+- Status: PASS
+- Implemented: Response Studio at /scenarios — incident picker, run form (4 patch kinds, integer-cent parsing), before/after table, changed inputs, verbatim assumptions, rule versions, other-incident diff, graph path link, history (Run #seq), toasts, sticky SIMULATION ONLY banner; approval panel (propose from simulation, submit, approve/reject with distinct demo identities and "Demo identities, not authenticated" note, allowedTransitions-driven buttons, audit timeline, readable errors, "Executed externally: Never").
+- Files: src/app/(app)/scenarios/**, src/components/simulator/**, tests/e2e/{scenarios,actions}.spec.ts, tests/unit/money-input.test.ts.
+- Commands: lint; typecheck; pnpm test 576; e2e 67/67 clean (QA); isolated committed tree tsc + lint + 555/555.
+- UX evidence (QA): +$600 → Critical→Low, $450→$0, margin $150, available $2,000→$2,600 (modeled); fund-auth unchanged after 6 runs + full approval flow (dump hash identical); self-approval refused; overflow 0 at 320–1024px.
+- QA: FS-14 UI PASS (1 cosmetic Low fixed); FS-15 UI PASS. Committed together because the Studio composes both.
+- Limitations: identities are free text (no auth) — labeled in UI; forbidden-transition 409 reachable only from a stale page (covered in e2e).
+- Commit: 83e38ee
+
+## Process notes — 2026-11-04
+- Concurrent e2e runs share `.next`; per-port DBs (e2e-${PORT}.db) isolate data only. Rule adopted: no build/typecheck/e2e in the repo without explicit orchestrator go; builders use isolated scratch copies.
+- Commit-boundary deviations (documented in commit messages): FS-11 before FS-05; FS-07 graph API inside FS-05 commit; FS-14+FS-15 UI combined; FS-16 runbook wiring inside FS-13.
