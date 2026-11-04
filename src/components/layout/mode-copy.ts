@@ -16,7 +16,7 @@ export type ModeChipCopy = {
 /** No connected source is a shell state, not a WorkspaceMode, so it lives here. */
 const NO_SOURCE: ModeChipCopy = {
   label: "NO SOURCE CONNECTED",
-  description: "No data source is connected. Nothing shown is live or demo data.",
+  description: "No data source is connected.",
   variant: "neutral",
 };
 

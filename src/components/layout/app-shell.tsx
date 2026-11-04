@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Brand } from "./brand";
 import { ModeChip } from "./mode-chip";
+import type { ShellFreshness } from "./shell-freshness";
 import type { DemoClock, ShellMode } from "./shell-status";
 import { SidebarNav } from "./sidebar-nav";
 
 export type AppShellProps = {
   mode: ShellMode;
+  /** Secondary note next to the chip, e.g. "Demo mode off · read-only". */
+  modeHint: string | null;
   /** Injected demo clock (valid or explicitly invalid), or null when unset. */
   demoClock: DemoClock | null;
-  /** Pre-formatted last-load label, or null when nothing has been loaded. */
-  freshnessLabel: string | null;
+  /** Source freshness derived server-side from the database. */
+  freshness: ShellFreshness;
   children: React.ReactNode;
 };
 
@@ -24,8 +27,9 @@ const FOCUSABLE =
 
 export function AppShell({
   mode,
+  modeHint,
   demoClock,
-  freshnessLabel,
+  freshness,
   children,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -177,7 +181,7 @@ export function AppShell({
             <div className="flex flex-col gap-2 border-t border-border p-4 text-xs text-subtle">
               <StatusLines
                 demoClock={demoClock}
-                freshnessLabel={freshnessLabel}
+                freshness={freshness}
                 placement="drawer"
               />
               <p className="leading-relaxed">
@@ -208,26 +212,36 @@ export function AppShell({
               wordmarkClassName="max-[400px]:sr-only"
             />
             <div className="ml-auto flex min-w-0 items-center gap-4">
-              <div className="hidden items-center gap-4 text-xs text-subtle sm:flex">
+              <div className="hidden items-center gap-4 text-xs text-subtle lg:flex">
                 <StatusLines
                   demoClock={demoClock}
-                  freshnessLabel={freshnessLabel}
+                  freshness={freshness}
                   placement="topbar"
                 />
               </div>
+              {modeHint ? (
+                <span data-testid="mode-hint" data-placement="topbar" className="hidden text-xs text-subtle lg:inline">
+                  {modeHint}
+                </span>
+              ) : null}
               <ModeChip mode={mode} />
             </div>
           </div>
-          {/* Compact status strip: keeps freshness visible below 640px. */}
+          {/* Compact status strip: keeps freshness visible below 1024px. */}
           <div
             data-testid="mobile-status"
-            className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/60 px-4 py-1.5 text-[0.6875rem] leading-4 text-subtle sm:hidden"
+            className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/60 px-4 py-1.5 text-[0.6875rem] leading-4 text-subtle sm:px-6 lg:hidden"
           >
             <StatusLines
               demoClock={demoClock}
-              freshnessLabel={freshnessLabel}
+              freshness={freshness}
               placement="mobile"
             />
+            {modeHint ? (
+              <span data-testid="mode-hint" data-placement="mobile">
+                {modeHint}
+              </span>
+            ) : null}
           </div>
         </header>
 
@@ -249,21 +263,30 @@ type StatusPlacement = "topbar" | "mobile" | "drawer";
 
 function StatusLines({
   demoClock,
-  freshnessLabel,
+  freshness,
   placement,
 }: {
   demoClock: DemoClock | null;
-  freshnessLabel: string | null;
+  freshness: ShellFreshness;
   placement: StatusPlacement;
 }) {
   return (
     <>
-      <span data-testid="source-freshness" data-placement={placement}>
-        {freshnessLabel ? (
+      <span
+        data-testid="source-freshness"
+        data-placement={placement}
+        data-status={freshness.status}
+        className={cn(freshness.status === "unavailable" && "text-warning")}
+      >
+        {freshness.status === "loaded" ? (
           <>
-            Last loaded:{" "}
-            <span className="font-mono text-muted">{freshnessLabel}</span>
+            {freshness.subject} captured{" "}
+            <time dateTime={freshness.capturedAt} className="font-mono text-muted">
+              {freshness.capturedLabel}
+            </time>
           </>
+        ) : freshness.status === "unavailable" ? (
+          "Source status unavailable"
         ) : (
           "No data loaded"
         )}

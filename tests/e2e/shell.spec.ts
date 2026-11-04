@@ -4,12 +4,18 @@ import { expect, test, type Page } from "@playwright/test";
 // DEMO_NOW=2026-11-17T16:00:00Z.
 
 const ROUTES = [
-  { path: "/dashboard", nav: "Overview", heading: "Overview" },
-  { path: "/graph", nav: "Dependency Graph", heading: "Dependency Graph" },
-  { path: "/incidents", nav: "Incidents", heading: "Incidents" },
-  { path: "/scenarios", nav: "Response Studio", heading: "Response Studio" },
-  { path: "/sources", nav: "Sources", heading: "Sources" },
+  { path: "/dashboard", nav: "Overview", heading: "Overview", placeholder: true },
+  // Graph reads the real graph (FS-07); covered by graph.spec.ts.
+  { path: "/graph", nav: "Dependency Graph", heading: "Dependency Graph", placeholder: false },
+  { path: "/incidents", nav: "Incidents", heading: "Incidents", placeholder: true },
+  { path: "/scenarios", nav: "Response Studio", heading: "Response Studio", placeholder: true },
+  // Sources reads the real ledger (FS-05); covered by sources.spec.ts.
+  { path: "/sources", nav: "Sources", heading: "Sources", placeholder: false },
 ] as const;
+
+// The webServer command resets the fictional demo; every fixture evidence record is
+// captured at 2026-11-17T16:00:00Z, so the shell reports that instant.
+const SEEDED_FRESHNESS = "Demo data captured 17 Nov 2026, 16:00 UTC";
 
 function topBarChip(page: Page) {
   return page.getByRole("banner").getByTestId("mode-chip");
@@ -55,7 +61,12 @@ test.describe("app shell", () => {
 
       await expect(chip).toHaveAttribute("data-mode", "DEMO");
       await expect(freshness(page, "topbar")).toBeVisible();
-      await expect(freshness(page, "topbar")).toHaveText("No data loaded");
+      await expect(freshness(page, "topbar")).toHaveText(SEEDED_FRESHNESS);
+      await expect(freshness(page, "topbar")).toHaveAttribute("data-status", "loaded");
+      await expect(freshness(page, "topbar").locator("time")).toHaveAttribute(
+        "datetime",
+        "2026-11-17T16:00:00.000Z",
+      );
       await expect(demoClock(page, "topbar")).toBeVisible();
       await expect(demoClock(page, "topbar")).toHaveText(
         "Demo clock: 17 Nov 2026, 16:00 UTC",
@@ -63,11 +74,13 @@ test.describe("app shell", () => {
       // The compact strip is for narrow viewports only.
       await expect(page.getByTestId("mobile-status")).toBeHidden();
 
-      await expect(
-        page.getByText(
-          "No data loaded yet — the seeded demo arrives in a later task.",
-        ),
-      ).toBeVisible();
+      if (route.placeholder) {
+        await expect(
+          page.getByText(
+            "No data loaded yet — the seeded demo arrives in a later task.",
+          ),
+        ).toBeVisible();
+      }
 
       const nav = page.getByRole("navigation", { name: "Main" });
       await expect(nav.getByRole("link")).toHaveCount(5);
@@ -159,7 +172,8 @@ test.describe("app shell", () => {
   });
 });
 
-for (const width of [390, 320]) {
+// 768 = tablet: sidebar visible but top bar still too narrow for full status.
+for (const width of [390, 320, 768]) {
   test.describe(`narrow viewport (${width}px)`, () => {
     test.use({ viewport: { width, height: 844 } });
 
@@ -173,12 +187,16 @@ for (const width of [390, 320]) {
         ).toBeVisible();
         await expect(topBarChip(page)).toBeVisible();
         await expect(topBarChip(page)).toContainText("DEMO DATA");
-        await expect(page.locator("#app-sidebar")).toBeHidden();
+        if (width < 768) {
+          await expect(page.locator("#app-sidebar")).toBeHidden();
+        } else {
+          await expect(page.locator("#app-sidebar")).toBeVisible();
+        }
 
         // Desktop status is hidden; the compact strip replaces it.
         await expect(freshness(page, "topbar")).toBeHidden();
         await expect(freshness(page, "mobile")).toBeVisible();
-        await expect(freshness(page, "mobile")).toHaveText("No data loaded");
+        await expect(freshness(page, "mobile")).toHaveText(SEEDED_FRESHNESS);
         await expect(demoClock(page, "mobile")).toBeVisible();
         await expect(demoClock(page, "mobile")).toHaveText(
           "Demo clock: 17 Nov 2026, 16:00 UTC",
@@ -216,7 +234,7 @@ test.describe("narrow viewport (390px) drawer", () => {
     await expect(
       dialog.getByRole("button", { name: "Close navigation" }),
     ).toBeFocused();
-    await expect(freshness(page, "drawer")).toHaveText("No data loaded");
+    await expect(freshness(page, "drawer")).toHaveText(SEEDED_FRESHNESS);
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();

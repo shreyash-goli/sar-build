@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { formatUtc, readShellStatus } from "@/components/layout/shell-status";
+import { readShellContext } from "@/components/layout/shell-context";
 import { ToastProvider } from "@/components/ui/toast";
 
 export default async function AppLayout({
@@ -9,18 +9,18 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Read DEMO_MODE / DEMO_NOW at request time, not frozen at build time.
+  // Read env and DB at request time, not frozen at build time.
   await connection();
-  const status = readShellStatus();
+  // Never throws: DB failures render "Source status unavailable" and the env-based chip.
+  const shell = await readShellContext();
 
   return (
     <ToastProvider>
       <AppShell
-        mode={status.mode}
-        demoClock={status.demoClock}
-        freshnessLabel={
-          status.lastLoadedAt ? formatUtc(status.lastLoadedAt) : null
-        }
+        mode={shell.chip.mode}
+        modeHint={shell.chip.hint}
+        demoClock={shell.demoClock}
+        freshness={shell.freshness}
       >
         {children}
       </AppShell>
