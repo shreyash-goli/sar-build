@@ -59,6 +59,18 @@ describe("T-02: +$600 allocation on fund-auth", () => {
     for (const d of r.diff.filter((x) => x.incidentKey !== HERO)) expect(d.changedFields, d.incidentKey).toEqual([]);
   });
 
+  it("assumption wording follows whether the limit is known", () => {
+    expect(r.assumptions[1]).toBe('Modeled +$600.00 allocation on "Auth Infrastructure" for the current monthly period (limit raised by the same amount).');
+    const s = snapshot();
+    s.fundingSources = s.fundingSources.map((f) => (f.id === "fund-auth" ? { ...f, limitCents: null } : f));
+    const noLimit = run(plus600, s);
+    expect(noLimit.assumptions[1]).toBe(
+      'Modeled +$600.00 allocation on "Auth Infrastructure" for the current monthly period (limit unknown; only available allocation modeled).',
+    );
+    expect(noLimit.changedInputs).toEqual([{ entity: "FUNDING_SOURCE", id: "fund-auth", field: "availableCents", before: 200000, after: 260000 }]);
+    expect(noLimit.focus.after).toMatchObject({ shortfallCents: 0, marginCents: 15000 });
+  });
+
   it("a partial increase leaves a smaller shortfall and keeps severity", () => {
     const p = run({ ...plus600, amountCents: 40000 });
     expect(p.focus.after).toMatchObject({ severity: "CRITICAL", shortfallCents: 5000 });

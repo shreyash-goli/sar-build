@@ -75,6 +75,7 @@ export function applyPatch(base: WorkspaceSnapshot, patch: SimulationPatch, now:
       const after = fund.availableCents + patch.amountCents;
       if (!Number.isSafeInteger(after)) throw infeasible("patch.amountCents", "resulting allocation exceeds the supported range");
       changedInputs.push({ entity: "FUNDING_SOURCE", id: fund.id, field: "availableCents", before: fund.availableCents, after });
+      const limitKnown = fund.limitCents !== null;
       if (fund.limitCents !== null) {
         const limitAfter = fund.limitCents + patch.amountCents;
         if (!Number.isSafeInteger(limitAfter)) throw infeasible("patch.amountCents", "resulting limit exceeds the supported range");
@@ -83,7 +84,9 @@ export function applyPatch(base: WorkspaceSnapshot, patch: SimulationPatch, now:
       }
       fund.availableCents = after;
       assumptions.push(
-        `Modeled +${formatCents(patch.amountCents)} allocation on "${fund.name}" for the current ${fund.interval.toLowerCase()} period (limit raised by the same amount).`,
+        `Modeled +${formatCents(patch.amountCents)} allocation on "${fund.name}" for the current ${fund.interval.toLowerCase()} period (${
+          limitKnown ? "limit raised by the same amount" : "limit unknown; only available allocation modeled"
+        }).`,
       );
       break;
     }
