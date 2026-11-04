@@ -125,22 +125,40 @@ test.describe("Sources / evidence ledger", () => {
     await expect(page).toHaveURL(/\/sources$/);
   });
 
-  test("derived evidence shows its rule lineage and the incident it supports", async ({ page, request }) => {
+  test("derived evidence shows its rule lineage, the incident it supports, and that its inputs are demo data", async ({
+    page,
+    request,
+  }) => {
     const derived = await fetchLedger(request, "?classification=DERIVED");
-    test.skip(derived.entries.length === 0, "no DERIVED evidence in this dataset");
-    const entry = derived.entries[0]!;
-    const lineage = (entry as Entry & { ruleLineage: { ruleId: string }[] }).ruleLineage;
-    expect(lineage.length).toBeGreaterThan(0);
+    type Derived = Entry & {
+      ruleLineage: { ruleId: string }[];
+      lineageStatus: string;
+      derivedFromSimulatedInputs: boolean;
+      display: { badge: { label: string } | null };
+    };
+    const current = (derived.entries as Derived[]).find((e) => e.lineageStatus === "CURRENT");
+    test.skip(!current, "no current DERIVED evidence in this dataset");
+    const entry = current!;
+    expect(entry.ruleLineage.length).toBeGreaterThan(0);
 
     await page.goto(`/sources?classification=DERIVED&source=${encodeURIComponent(entry.id)}`);
     const panel = inspector(page);
     await expect(panel.getByTestId("classification-badge")).toHaveText("Derived");
-    await expect(panel.getByTestId("simulation-badge")).toHaveCount(0);
-    await expect(panel.getByTestId("trust-summary")).toContainText("Derived by a deterministic rule");
-    await expect(panel.getByTestId("trust-summary")).not.toContainText("Not simulated");
+    // Badge mirrors the API: DERIVED from demo inputs carries DEMO DATA.
+    if (entry.display.badge) {
+      await expect(panel.getByTestId("simulation-badge")).toHaveText(entry.display.badge.label);
+    } else {
+      await expect(panel.getByTestId("simulation-badge")).toHaveCount(0);
+    }
+    const trust = panel.getByTestId("trust-summary");
+    await expect(trust).toContainText("Derived by a deterministic rule");
+    await expect(trust).not.toContainText("Not simulated");
+    if (entry.derivedFromSimulatedInputs) await expect(trust).toContainText("Inputs are demo data");
+
     const rules = panel.getByTestId("rule-lineage");
     await expect(rules).not.toContainText("No rule lineage yet");
-    await expect(rules).toContainText(lineage[0]!.ruleId);
+    await expect(rules).toContainText(entry.ruleLineage[0]!.ruleId);
+    await expect(panel.getByTestId("lineage-superseded")).toHaveCount(0);
     await expect(panel.getByTestId("supported-assertion").first()).toContainText("Incident");
   });
 

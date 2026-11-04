@@ -225,7 +225,24 @@ export function EvidenceInspector({
         <h3 id="lineage-title" className="text-sm font-semibold text-foreground">
           Rule lineage
         </h3>
-        {entry.ruleLineage.length === 0 ? (
+        {entry.lineageStatus === "SUPERSEDED" ? (
+          <div
+            data-testid="lineage-superseded"
+            className="flex flex-col gap-1.5 rounded-md border border-border-strong bg-background/60 px-3 py-2.5 text-sm"
+          >
+            <p className="text-foreground">{entry.lineageNote ?? "Superseded evaluation; not cited by a current incident"}</p>
+            {entry.recordedRule ? (
+              <p className="text-xs text-muted">
+                Recorded rule{" "}
+                <code className="break-all font-mono text-foreground">{entry.recordedRule.ruleId ?? "unreadable"}</code> ·
+                evaluated{" "}
+                <time dateTime={entry.recordedRule.evaluatedAt} className="font-mono">
+                  {formatUtc(entry.recordedRule.evaluatedAt)}
+                </time>
+              </p>
+            ) : null}
+          </div>
+        ) : entry.ruleLineage.length === 0 ? (
           <p className="text-sm text-muted">
             No rule lineage yet.{" "}
             <span className="text-subtle">

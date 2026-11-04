@@ -85,7 +85,9 @@ export function trustSummary(entry: EvidenceLedgerEntry): {
       ? "Sandbox / mock data. Not live company funds."
       : "Demo / mock data. Fictional; not live business evidence."
     : entry.classification === "DERIVED"
-      ? "Derived by a deterministic rule. Only as real as its inputs: check the rule lineage."
+      ? entry.derivedFromSimulatedInputs
+        ? "Derived by a deterministic rule. Inputs are demo data, so this result describes the fictional demo only."
+        : "Derived by a deterministic rule. Only as real as its inputs: check the rule lineage."
       : entry.classification === "MODEL_SUGGESTED"
         ? "Model suggestion. A hypothesis, not a fact."
         : entry.classification === "UNKNOWN"

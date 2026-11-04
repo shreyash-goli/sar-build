@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 
 import type { EvidenceLedgerEntry, SourcesListQuery } from "@/lib/provenance";
 import { formatUtc } from "@/components/layout/shell-status";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ClassificationBadge, SimulationBadge, VerificationBadge } from "./badges";
 import { sourcesHref } from "./query";
@@ -46,6 +47,11 @@ export function EvidenceList({
                   <SimulationBadge entry={entry} />
                   <ClassificationBadge entry={entry} />
                   <VerificationBadge entry={entry} />
+                  {entry.lineageStatus === "SUPERSEDED" ? (
+                    <Badge variant="neutral" className="normal-case tracking-normal" data-testid="superseded-badge">
+                      Superseded
+                    </Badge>
+                  ) : null}
                 </div>
                 {entry.excerpt ? (
                   <p className="line-clamp-2 break-words text-sm leading-relaxed text-muted">
