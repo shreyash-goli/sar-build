@@ -5,11 +5,17 @@
  */
 import * as z from "zod";
 import { EvidenceCategorySchema, ProvenanceToneSchema } from "../provenance/ledger-schema";
-import { BillingMethod, SourceClass, VerificationStatus } from "../schema/enums";
+import { BillingMethod, EvidenceMethod, SourceClass, VerificationStatus } from "../schema/enums";
+import { IsoDateTimeSchema } from "../schema/primitives";
 import { EdgeSchema, NodeSchema } from "../schema/graph";
 
 export const GraphEvidenceSummarySchema = z.strictObject({
   id: z.string(),
+  /** Evidence method: MANUAL (human, incl. graph reviews), MANIFEST, MODEL, FIXTURE, API, RULE. */
+  kind: EvidenceMethod,
+  sourceSystem: z.string(),
+  capturedAt: IsoDateTimeSchema,
+  observedAt: IsoDateTimeSchema.nullable(),
   classification: SourceClass,
   verificationStatus: VerificationStatus,
   excerpt: z.string().nullable(),

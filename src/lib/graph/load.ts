@@ -17,6 +17,10 @@ function summarize(ev: EvidenceRecord): GraphEvidenceSummary {
   const d = SOURCE_CLASS_DISPLAY[ev.classification];
   return {
     id: ev.id,
+    kind: ev.kind,
+    sourceSystem: ev.sourceSystem,
+    capturedAt: ev.capturedAt,
+    observedAt: ev.observedAt,
     classification: ev.classification,
     verificationStatus: ev.verificationStatus,
     excerpt: ev.excerpt,

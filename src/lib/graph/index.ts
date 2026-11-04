@@ -2,3 +2,4 @@
 export * from "./traverse";
 export * from "./impact";
 export * from "./schema";
+export * from "./review-schema";
