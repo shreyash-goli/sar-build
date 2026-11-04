@@ -26,12 +26,6 @@ const SERVER_ONLY = [
   /^src\/lib\/providers\/import-service\.ts$/,
   /^src\/lib\/demo\/(northstar|cli-env)\.ts$/,
 ];
-/**
- * Known, reviewed process.env reads in client-reachable modules. They read NON-secret demo
- * settings (DEMO_MODE, DEMO_NOW) as default parameters; Next.js inlines only NEXT_PUBLIC_*
- * into browser bundles, so in the browser they evaluate to undefined. Any new read fails.
- */
-const REVIEWED_ENV_READS = new Set(["src/lib/env.ts", "src/lib/time.ts", "src/components/layout/shell-status.ts"]);
 const SECRET_NAMES = /\b(LLM_API_KEY|RAMP_CLIENT_SECRET|RAMP_CLIENT_ID|ADMIN_TOKEN|DATABASE_URL)\b/;
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -123,7 +117,6 @@ describe("client/server separation", () => {
         const code = stripComments(readFileSync(file, "utf8"));
         for (const m of code.matchAll(/process\.env(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[)?/g)) {
           const name = m[1];
-          if (REVIEWED_ENV_READS.has(rel(file))) continue;
           if (!name || !(name === "NODE_ENV" || name.startsWith("NEXT_PUBLIC_"))) violations.push(`${path.join(" -> ")}: ${m[0]}`);
         }
         if (SECRET_NAMES.test(code)) violations.push(`${path.join(" -> ")}: names ${code.match(SECRET_NAMES)![0]}`);
