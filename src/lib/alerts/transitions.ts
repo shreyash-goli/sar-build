@@ -40,12 +40,13 @@ export function classifyTransition(prev: RiskState | null, next: RiskState): Ale
   return null;
 }
 
+const article = (word: string) => (/^[AEIOU]/i.test(word) ? "an" : "a");
 const label = (c: RiskCategory | null) => (c ? c.toLowerCase().replace(/_/g, " ") : "unknown category");
 
 function text(kind: AlertKind, title: string, prev: RiskState | null, next: RiskState): { title: string; message: string } {
   switch (kind) {
     case "CREATED":
-      return { title: `New ${next.severity} risk: ${title}`, message: `The risk engine opened a ${next.severity} ${label(next.category)} incident.` };
+      return { title: `New ${next.severity} risk: ${title}`, message: `The risk engine opened ${article(next.severity)} ${next.severity}-severity incident: ${label(next.category)}.` };
     case "REOPENED":
       return {
         title: `Risk returned (${next.severity}): ${title}`,

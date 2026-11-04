@@ -77,6 +77,9 @@ describe("alert creation", () => {
       category: "PROJECTED_SHORTFALL",
       createdAt: "2026-11-17T16:00:00Z",
     });
+    expect(hero.message).toBe("The risk engine opened a CRITICAL-severity incident: projected shortfall.");
+    // Article agrees and the word is not duplicated (was "a UNKNOWN unknown data incident").
+    expect(all.find((a) => a.severity === "UNKNOWN")!.message).toBe("The risk engine opened an UNKNOWN-severity incident: unknown data.");
     const view = await list();
     expect(view.counts).toEqual({ active: 3, snoozed: 0, acknowledged: 0, total: 3 });
     expect(view.notice).toBe("In-app only: no external notification sent");
