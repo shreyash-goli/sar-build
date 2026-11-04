@@ -20,6 +20,12 @@ export const DEFAULT_SIMULATION_ACTOR = "demo-user";
 
 const iso = (d: Date) => d.toISOString().replace(".000Z", "Z");
 
+/** The persisted run number (beforeJson.seq); 0 for records without one. */
+export function seqOf(sim: { beforeJson: unknown }): number {
+  const seq = (sim.beforeJson as { seq?: unknown } | null)?.seq;
+  return typeof seq === "number" && Number.isSafeInteger(seq) && seq > 0 ? seq : 0;
+}
+
 export async function loadWorkspaceSnapshot(repos: Repositories): Promise<WorkspaceSnapshot> {
   const [nodes, edges, vendors, fundingSources, charges, transactions, evidence] = await Promise.all([
     repos.nodes.list(),
@@ -52,12 +58,14 @@ export async function runSimulation(repos: Repositories, input: RunSimulationInp
   );
   const actor = input.actor ?? DEFAULT_SIMULATION_ACTOR;
   const createdAt = iso(input.now);
+  // Persisted monotonic sequence: max existing + 1 (runs are serialized by the transaction).
+  const seq = Math.max(0, ...(await repos.simulations.list()).map(seqOf)) + 1;
 
   const sim = await repos.simulations.create({
     id: `sim-${randomUUID()}`,
     incidentId: incident.id,
     patchJson: input.patch,
-    beforeJson: { label: SIMULATION_LABEL, findings: result.before },
+    beforeJson: { label: SIMULATION_LABEL, seq, findings: result.before },
     afterJson: result,
     createdAt,
     createdBy: actor,
@@ -83,7 +91,7 @@ export async function runSimulation(repos: Repositories, input: RunSimulationInp
   });
 
   return {
-    simulation: { id: sim.id, incidentId: sim.incidentId, createdAt, createdBy: actor, isDemo: true, label: SIMULATION_LABEL, patch: input.patch, result },
+    simulation: { id: sim.id, seq, incidentId: sim.incidentId, createdAt, createdBy: actor, isDemo: true, label: SIMULATION_LABEL, patch: input.patch, result },
     auditEventId: audit.id,
   };
 }

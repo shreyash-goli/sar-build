@@ -81,7 +81,7 @@ describe("POST /api/scenarios/run", () => {
     expect(res.status).toBe(201);
     const { data, meta } = RunEnvelope.parse(await res.json());
     expect(meta).toMatchObject({ workspaceMode: "DEMO", generatedAt: NOW });
-    expect(data.simulation).toMatchObject({ incidentId: HERO, isDemo: true, label: "SIMULATION ONLY", createdAt: NOW, createdBy: "demo-user", patch: plus600 });
+    expect(data.simulation).toMatchObject({ seq: 1, incidentId: HERO, isDemo: true, label: "SIMULATION ONLY", createdAt: NOW, createdBy: "demo-user", patch: plus600 });
     const r = data.simulation.result;
     expect(r.focus.before).toMatchObject({ severity: "CRITICAL", availableCents: 200000, shortfallCents: 45000 });
     expect(r.focus.after).toMatchObject({ category: "NO_RISK", severity: "LOW", availableCents: 260000, shortfallCents: 0, marginCents: 15000 });
@@ -189,6 +189,19 @@ describe("GET /api/scenarios", () => {
     for (const s of body.data.simulations) expect(s.label).toBe("SIMULATION ONLY");
     expect(ListEnvelope.parse(await (await list()).json()).data.simulations).toHaveLength(2);
     expect(ListEnvelope.parse(await (await list("?incidentId=inc-tx-webhookworks-20261116")).json()).data.simulations).toEqual([]);
+  });
+
+  it("newest first is deterministic under the demo clock (persisted seq)", async () => {
+    const amounts = [10000, 20000, 30000, 40000, 50000];
+    for (const amountCents of amounts) await post({ incidentId: HERO, patch: { ...plus600, amountCents } });
+    for (let i = 0; i < 3; i++) {
+      const sims = ListEnvelope.parse(await (await list(`?incidentId=${HERO}`)).json()).data.simulations;
+      expect(sims.every((x) => x.createdAt === NOW)).toBe(true);
+      expect(sims.map((x) => x.seq)).toEqual([5, 4, 3, 2, 1]);
+      expect(sims.map((x) => (x.patch.kind === "INCREASE_AVAILABLE_ALLOCATION" ? x.patch.amountCents : 0))).toEqual([...amounts].reverse());
+    }
+    const stored = await repos.simulations.list();
+    expect(stored.map((x) => (x.beforeJson as { seq: number }).seq).sort()).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("400 for bad params, 404 for unknown incidents", async () => {

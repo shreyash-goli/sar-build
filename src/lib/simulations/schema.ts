@@ -73,6 +73,11 @@ export type SimulationResult = z.infer<typeof SimulationResultSchema>;
 
 export const SimulationRecordViewSchema = z.strictObject({
   id: z.string(),
+  /**
+   * Monotonic run number (1, 2, 3...) across the workspace. Under the fixed demo clock every
+   * run shares createdAt, so lists order by createdAt then seq (newest first).
+   */
+  seq: z.int().positive(),
   incidentId: z.string(),
   createdAt: IsoDateTimeSchema,
   createdBy: z.string(),
