@@ -447,6 +447,38 @@ describe("edge provenance gate", () => {
     );
   });
 
+  it.each([
+    ["MANUAL", "EXTERNAL_OBSERVED"],
+    ["API", "RAMP_SANDBOX"],
+  ] as const)("rejects a direct CONFIRMED create on unverified %s/%s evidence", async (kind, classification) => {
+    await repos.evidence.create(fixtureEvidence("ev-direct", { kind, classification, sourceSystem: "direct" }));
+    await expect(repos.edges.create(edge({ evidenceId: "ev-direct" }))).rejects.toBeInstanceOf(ProvenanceViolationError);
+    expect(await repos.edges.list()).toHaveLength(0);
+  });
+
+  it("delete-and-recreate cannot sidestep the promotion rule", async () => {
+    await repos.edges.create(edge({ evidenceId: "ev-model", reviewStatus: "SUGGESTED" }));
+    await repos.evidence.create(
+      fixtureEvidence("ev-manual-2", { kind: "MANUAL", classification: "EXTERNAL_OBSERVED", sourceSystem: "ops-note" }),
+    );
+    await repos.edges.delete("edge-1");
+    await expect(repos.edges.create(edge({ evidenceId: "ev-manual-2" }))).rejects.toBeInstanceOf(ProvenanceViolationError);
+    await expect(repos.edges.create(edge({ evidenceId: "ev-model" }))).rejects.toBeInstanceOf(ProvenanceViolationError);
+    expect(await repos.edges.list()).toHaveLength(0);
+  });
+
+  it("allows a direct CONFIRMED create on USER_VERIFIED non-fixture evidence", async () => {
+    await repos.evidence.create(
+      fixtureEvidence("ev-verified", {
+        kind: "MANUAL",
+        classification: "EXTERNAL_OBSERVED",
+        sourceSystem: "user-review",
+        verificationStatus: "USER_VERIFIED",
+      }),
+    );
+    await expect(repos.edges.create(edge({ evidenceId: "ev-verified" }))).resolves.toMatchObject({ reviewStatus: "CONFIRMED" });
+  });
+
   it("still allows creating a CONFIRMED edge directly on DEMO_FIXTURE evidence (seed path)", async () => {
     await expect(repos.edges.create(edge())).resolves.toMatchObject({ reviewStatus: "CONFIRMED", evidenceId: "ev-edge" });
   });

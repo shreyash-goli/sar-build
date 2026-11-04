@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkEdgeEvidence, evidenceRequiresReview } from "@/lib/repositories/edge-policy";
+import { checkEdgeEvidence, evidenceRequiresReview, isSyntheticFixtureEvidence } from "@/lib/repositories/edge-policy";
 import { ReviewStatus } from "@/lib/schema";
 
 describe("edge evidence policy", () => {
@@ -23,9 +23,32 @@ describe("edge evidence policy", () => {
     ).toBe(false);
   });
 
-  it("allows CONFIRMED demo fixtures and API observations", () => {
+  it("allows CONFIRMED on unverified synthetic FIXTURE/DEMO_FIXTURE evidence only", () => {
+    expect(isSyntheticFixtureEvidence({ kind: "FIXTURE", classification: "DEMO_FIXTURE" })).toBe(true);
+    expect(isSyntheticFixtureEvidence({ kind: "MANUAL", classification: "DEMO_FIXTURE" })).toBe(false);
     expect(checkEdgeEvidence("CONFIRMED", { kind: "FIXTURE", classification: "DEMO_FIXTURE", verificationStatus: "UNVERIFIED" }).ok).toBe(true);
-    expect(checkEdgeEvidence("CONFIRMED", { kind: "API", classification: "RAMP_SANDBOX", verificationStatus: "UNVERIFIED" }).ok).toBe(true);
+  });
+
+  it.each([
+    ["MANUAL", "EXTERNAL_OBSERVED"],
+    ["MANUAL", "DEMO_FIXTURE"],
+    ["MANUAL", "UNKNOWN"],
+    ["API", "RAMP_SANDBOX"],
+    ["API", "EXTERNAL_OBSERVED"],
+    ["MANIFEST", "EXTERNAL_OBSERVED"],
+    ["MANIFEST", "MODEL_SUGGESTED"],
+    ["MODEL", "MODEL_SUGGESTED"],
+    ["RULE", "DERIVED"],
+  ] as const)("direct CONFIRMED create on unverified %s/%s is rejected; USER_VERIFIED is allowed", (kind, classification) => {
+    expect(evidenceRequiresReview({ kind, classification })).toBe(true);
+    expect(checkEdgeEvidence("CONFIRMED", { kind, classification, verificationStatus: "UNVERIFIED" }, null).ok).toBe(false);
+    expect(checkEdgeEvidence("CONFIRMED", { kind, classification, verificationStatus: "USER_VERIFIED" }, null).ok).toBe(true);
+  });
+
+  it("editing an already-CONFIRMED edge onto unverified non-fixture evidence is rejected", () => {
+    expect(
+      checkEdgeEvidence("CONFIRMED", { kind: "MANUAL", classification: "EXTERNAL_OBSERVED", verificationStatus: "UNVERIFIED" }, "CONFIRMED").ok,
+    ).toBe(false);
   });
 
   it("never confirms on REJECTED evidence", () => {

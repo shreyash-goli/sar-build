@@ -594,6 +594,6 @@ export async function repositoriesForRequest(request: Request): Promise<Reposito
   return createRepositories(getDb(), { writeGate: () => assertRequestWritesAllowed(request) });
 }
 
-export { checkEdgeEvidence, evidenceRequiresReview } from "./edge-policy";
+export { checkEdgeEvidence, evidenceRequiresReview, isSyntheticFixtureEvidence } from "./edge-policy";
 export * from "./errors";
 export type { AppendOnlyRepository, MutableRepository, WriteGate } from "./base";
