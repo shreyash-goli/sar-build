@@ -16,6 +16,11 @@ export const ManifestImportRequestSchema = z.strictObject({
   /** The SERVICE node the repository implements (the edges point into it). */
   serviceNodeId: IdSchema,
   importedBy: z.string().trim().min(1).max(80),
+  /**
+   * "rules" (default): the deterministic taxonomy matcher. "ai": an LLM maps findings to vendors
+   * (FS-19); requires LLM_API_KEY + LLM_MODEL, otherwise 503 AI OFF (never a silent fallback).
+   */
+  suggester: z.enum(["rules", "ai"]).optional(),
   /** Inline text only: no paths, URLs or remote fetches are accepted. */
   files: z
     .array(z.strictObject({ filename: z.string().min(1).max(128), content: z.string() }))
@@ -41,6 +46,18 @@ export const ManifestImportDataSchema = z.strictObject({
   /** Dependencies with no taxonomy match. */
   unrecognizedCount: z.int().nonnegative(),
   auditEventId: z.string(),
+  /** Which suggester produced `suggested`, and why (never silent). */
+  suggester: z.strictObject({
+    requested: z.enum(["rules", "ai"]),
+    used: z.enum(["RULES", "AI"]),
+    /** OK; or AI_ERROR when the AI request failed or was rejected and rules were used instead (explicitly). */
+    status: z.enum(["OK", "AI_ERROR"]),
+    message: z.string().nullable(),
+    /** Model suggestions that failed validation (hallucinated sources, unknown providers/nodes, schema). */
+    rejected: z.array(z.strictObject({ reason: z.string(), detail: z.string() })),
+    /** AI only: findings NOT sent to the model because the built-in taxonomy does not recognise them. Null when no AI plan was made. */
+    omittedFindings: z.int().nonnegative().nullable(),
+  }),
   /** Risk engine re-run (suggested edges only change possible impacts, never confirmed severity). */
   incidents: z.strictObject({
     evaluatedAt: IsoDateTimeSchema,
