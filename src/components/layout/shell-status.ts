@@ -11,6 +11,7 @@
  * Call only from Server Components after `await connection()` so values are
  * read at request time rather than frozen at build time.
  */
+import { isDemoModeEnabled } from "@/lib/env";
 import type { WorkspaceMode } from "@/lib/schema/enums";
 
 /** Workspace mode, or `null` when no data source is connected. */
@@ -34,8 +35,8 @@ export type ShellStatus = {
 export function readShellStatus(
   env: Record<string, string | undefined> = process.env,
 ): ShellStatus {
-  const mode: ShellMode =
-    env.DEMO_MODE?.trim().toLowerCase() === "true" ? "DEMO" : null;
+  // Shared parser keeps the chip consistent with the server write gate.
+  const mode: ShellMode = isDemoModeEnabled(env) ? "DEMO" : null;
 
   let demoClock: DemoClock | null = null;
   const rawNow = env.DEMO_NOW?.trim();

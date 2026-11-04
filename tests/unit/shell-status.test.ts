@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getModeChipCopy } from "@/components/layout/mode-copy";
+import { isDemoModeEnabled } from "@/lib/env";
 import { formatUtc, readShellStatus } from "@/components/layout/shell-status";
 
 // readShellStatus() defaults to process.env; each test stubs the variables it
@@ -102,6 +103,22 @@ describe("readShellStatus + getModeChipCopy", () => {
       status: "valid",
       label: "02 Jan 2026, 03:04 UTC",
     });
+  });
+});
+
+describe("DEMO_MODE parsing matches the shared server gate", () => {
+  it.each(["true", "TRUE", " True ", "false", "", "yes", "1", undefined])(
+    "DEMO_MODE=%j: chip mode agrees with isDemoModeEnabled",
+    (demoMode) => {
+      const env = { DEMO_MODE: demoMode };
+      expect(readShellStatus(env).mode === "DEMO").toBe(isDemoModeEnabled(env));
+    },
+  );
+
+  it("DEMO_MODE=TRUE enables demo mode in both the chip and the write gate", () => {
+    stubEnv({ DEMO_MODE: "TRUE", DEMO_NOW: undefined });
+    expect(isDemoModeEnabled()).toBe(true);
+    expect(getModeChipCopy(readShellStatus().mode).label).toBe("DEMO DATA");
   });
 });
 
