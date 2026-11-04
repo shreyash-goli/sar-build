@@ -14,6 +14,15 @@ export const InputRefSchema = z
   .string()
   .regex(/^[a-z][a-z-]*:\S+$/, 'input must be a typed reference like "evidence:<id>"');
 
+/**
+ * Graph path reference from src/lib/graph ("path:" + edge IDs joined by "|").
+ * Longer than a record ID by design: it spells out the exact causal chain.
+ */
+export const PathIdSchema = z
+  .string()
+  .max(4096)
+  .regex(/^path:[^|\s]+(\|[^|\s]+)*$/, 'path id must look like "path:<edgeId>|<edgeId>..."');
+
 /** Every UI assertion has this inspectable chain. */
 export const RiskAssertionSchema = z
   .strictObject({
@@ -43,7 +52,7 @@ export const RiskReasonSchema = z.strictObject({
   thresholdDays: z.int().nonnegative().nullable(),
   amountCents: NullableCentsSchema,
   daysUntil: z.int().nullable(),
-  confirmedImpactedPathIds: z.array(IdSchema),
+  confirmedImpactedPathIds: z.array(PathIdSchema),
   detail: NonEmptyTextSchema,
 });
 export type RiskReason = z.infer<typeof RiskReasonSchema>;

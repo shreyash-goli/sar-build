@@ -14,6 +14,8 @@ import {
   VendorSchema,
   WorkspaceSchema,
   apiResponseSchema,
+  PathIdSchema,
+  RiskReasonSchema,
   apiSuccessSchema,
   canTransitionActionProposal,
   findCardSecretKeys,
@@ -302,5 +304,33 @@ describe("API envelopes", () => {
     expect(s.safeParse({ data: 1, meta }).success).toBe(true);
     expect(s.safeParse({ error: { code: "NOT_FOUND", message: "x" } }).success).toBe(true);
     expect(s.safeParse({ data: 1, meta, error: { code: "NOT_FOUND", message: "x" } }).success).toBe(false);
+  });
+});
+
+describe("PathIdSchema (graph path references)", () => {
+  const hero =
+    "path:edge-fund-auth--card-auth|edge-card-auth--vendor-cloudcomms|edge-vendor-cloudcomms--service-otp-gateway|edge-service-otp-gateway--workflow-account-login|edge-workflow-account-login--outcome-customer-checkout";
+
+  it("accepts real path IDs longer than a record ID", () => {
+    expect(hero.length).toBeGreaterThan(128);
+    expect(PathIdSchema.parse(hero)).toBe(hero);
+    expect(PathIdSchema.safeParse("path:edge-a").success).toBe(true);
+  });
+
+  it.each(["", "path:", "edge-a|edge-b", "path:a||b", "path:a b", "path:a|", `path:${"x".repeat(4100)}`])("rejects %j", (v) => {
+    expect(PathIdSchema.safeParse(v).success).toBe(false);
+  });
+
+  it("RiskReason accepts long path IDs", () => {
+    expect(
+      RiskReasonSchema.safeParse({
+        riskRuleId: "risk-severity-v1",
+        thresholdDays: 3,
+        amountCents: 45000,
+        daysUntil: 2,
+        confirmedImpactedPathIds: [hero],
+        detail: "x",
+      }).success,
+    ).toBe(true);
   });
 });
