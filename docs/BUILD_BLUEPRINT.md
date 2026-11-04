@@ -451,7 +451,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** An imported edge without an evidence reference fails validation; unknown money is not coerced to zero; simulated data gets explicit badges.  
 **Verify:** `pnpm test -- provenance`.
 
-### [ ] FS-03 — Create persistent normalized database
+### [x] FS-03 — Create persistent normalized database
 **Depends on:** FS-02.  
 **Build:** Implement the domain models from Section 2 with Prisma; migrations, DB singleton, uniqueness constraints, and typed repository helpers. Protect write routes behind server-side demo mode or minimal admin gate, not a hidden frontend control.  
 **Files:** `prisma/schema.prisma`, `src/lib/db.ts`, `src/lib/repositories/**`, migration files.  

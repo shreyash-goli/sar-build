@@ -1,17 +1,18 @@
 # Progress
 
 ## Now
-- FS-03 — persistent normalized database (@backend, in progress)
-- FS-01 follow-up — shared provenance labels in mode chip, mobile freshness, invalid-clock label (@frontend, in progress)
+- FS-04 — seed Northstar Labs (@backend, in progress; fixture + clock drafted)
 
 ## Next
-- FS-04 seed (after FS-03) → FS-05 → FS-06; FS-10 after FS-04
+- FS-05 (after FS-04) → FS-06; FS-10 after FS-04
 - FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
 
 ## Done
 - FS-00 — runnable repository (commit c7ec96f)
 - FS-01 — design system & navigation (commit 647d66c)
 - FS-02 — provenance & data-contract types (commit 10d2d07)
+- FS-01 follow-up (commits 9de418d, f60135c)
+- FS-03 — persistent normalized database (commit 6d82325)
 
 ## Blockers
 - None
@@ -53,3 +54,22 @@
 - Limitations: PAN embedded inside a longer ID string is not detected (anchored pattern); CONFIRMED-edge-with-unreviewed-model-evidence check deferred to FS-03 repository layer.
 - Commit: 10d2d07
 - Next: FS-03
+
+## FS-01 follow-up — 2026-11-03
+- Status: PASS
+- Implemented: mode chip uses shared @/lib/provenance metadata (WORKSPACE_MODE_DISPLAY, getSimulationBadge); compact mobile freshness strip (<640px); "Demo clock invalid" for unparseable DEMO_NOW; shared ProvenanceTone→Badge map; shell-status uses shared isDemoModeEnabled so chip and write gate agree.
+- Files: src/components/layout/{app-shell,brand,mode-chip,mode-copy,shell-status}.ts(x), src/components/ui/provenance-tone.ts, src/app/(app)/{layout.tsx,sources/page.tsx}, tests/e2e/shell.spec.ts, tests/unit/shell-status.test.ts.
+- Commands: pnpm test -- shell-status 21/21; lint, typecheck, build PASS; pnpm test:e2e 21/21.
+- QA: PASS (manual check of DEMO_NOW=garbage at 320/1280px; contrast 5.68:1 / 9.7:1).
+- Limitations: "Demo clock invalid" rendering covered by unit + manual check only (e2e server uses valid clock); toast still has no real caller.
+- Commit: 9de418d, f60135c
+
+## FS-03 — 2026-11-03
+- Status: PASS
+- Implemented: Prisma 7.10 + SQLite (libSQL driver adapter) schema for all 13 models mirroring FS-02 Zod contracts; init migration; BigInt integer-cent money (Prisma Int is 32-bit); no @default, nullable unknowns; unique keys (externalFundId, externalCardId, Vendor.normalizedKey, Transaction.providerEventId, Incident.scenarioKey, Edge(from,to,relation), Evidence(sourceSystem,sourceId,capturedAt)); evidence FKs Restrict. getDb() singleton with browser guard. Typed repositories validating with Zod on read/write; idempotent transaction ingest; evidence/audit/simulation have no update/delete; incidents only via gated deleteForDemoReset. Edge provenance gate (USER_VERIFIED required for MODEL/MANIFEST/RULE or MODEL_SUGGESTED/UNKNOWN/DERIVED evidence and for any promotion to CONFIRMED). ActionProposal create limited to DRAFT/PENDING_APPROVAL, invalid transitions → 409. Write gate: DEMO_MODE (shared parser src/lib/env.ts) or ≥16-char ADMIN_TOKEN (constant-time).
+- Files: prisma/schema.prisma, prisma/migrations/20261104064525_init/**, prisma.config.ts, src/lib/{db,env}.ts, src/lib/repositories/**, src/lib/security/write-gate.ts, tests/integration/repositories.test.ts, tests/unit/{edge-policy,env,write-gate}.test.ts, package.json (+@prisma/adapter-libsql 7.10.1, db:generate/db:deploy/postinstall; build/typecheck run prisma generate), .env.example (ADMIN_TOKEN), .gitignore (/src/generated/), eslint.config.mjs.
+- Commands: prisma validate PASS; prisma migrate dev --name init applied, re-run "Already in sync"; prisma migrate status up to date; pnpm test 217/217 (incl. FS-04 prep tests); pnpm test -- repositories 33/33; lint, typecheck, build PASS.
+- QA: initial PASS with 1 Medium (RULE/DERIVED evidence could confirm edges) + 4 Low → fixed → re-verify PASS. QA clean-clone check: frozen offline install regenerates client, typecheck/build/test pass with no .env/dev.db; dev.db sha1 unchanged by tests.
+- Limitations: immutability enforced at repository layer only (no SQLite triggers; raw Prisma client can still update evidence); direct CONFIRMED create on unverified MANUAL/API evidence still allowed (fix queued with FS-04); first API route may need serverExternalPackages for libSQL; Prisma CLI does not read .env (defaults match .env.example).
+- Commit: 6d82325
+- Next: FS-04
