@@ -571,14 +571,14 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Mocked API tests pass; actual sandbox read succeeds only if credentials are present. The UI says `READ-ONLY RAMP SANDBOX` and tells the truth if a field is missing. If access is unavailable, mark this task BLOCKED/NOT IMPLEMENTED and keep demo mode fully functional.  
 **Verify:** fake provider tests and, only with permission, manual sandbox read. **Never invent external success.**
 
-### [ ] FS-19 — AI-assisted dependency discovery, explicitly reviewable
+### [x] FS-19 — AI-assisted dependency discovery, explicitly reviewable
 **Depends on:** FS-09, FS-17. **Optional: requires LLM API key.**  
 **Build:** LLM takes curated, non-secret manifest snippets plus approved service taxonomy and returns strict JSON suggested edges with source references, an explanation and uncertainty. Validate Zod output; reject hallucinated symbols/paths; bound costs and prompt size; never send secrets or whole private repos. Every returned edge stays `SUGGESTED` until a human review. Provide deterministic rules-based fallback.  
 **Files:** `src/lib/providers/llm-suggestions.ts`, tests with mocked model outputs.  
 **Done when:** A genuine provider hint is explained with a verifiable file pointer and cannot silently become a confirmed edge. Missing key is clearly labeled `AI OFF`, not fake AI.  
 **Verify:** valid/invalid/hallucinated JSON tests, no-key mode, reviewed transition.
 
-### [ ] FS-20 — Intelligent alert center and event transition timeline
+### [x] FS-20 — Intelligent alert center and event transition timeline
 **Depends on:** FS-17.  
 **Build:** On material change of risk classification, create one in-app alert with severity, source, owner, and deep link. Add notification drawer, ack/snooze in demo, and history. Do not send real Slack/email unless user explicitly configures a provider; never label internal notifications “sent” externally.  
 **Files:** `src/lib/alerts/**`, components/tests.  

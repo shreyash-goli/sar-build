@@ -1,8 +1,9 @@
 # Progress
 
 ## Now
-- MVP gate FS-00–FS-17 COMPLETE (FS-17 commit 2790251).
-- Post-MVP: FS-20 alerts UI (@frontend; backend committed 10ed651); FS-19 AI suggestions in "AI OFF" mode with rules fallback (@backend); FS-18 read-only Ramp adapter with mocked tests (@backend).
+- MVP gate FS-00–FS-17 COMPLETE (2790251). FS-19 (fe6e55a) and FS-20 (10ed651 + d25aef4) COMPLETE.
+- FS-18 — backend committed bf18d61; UI "READ-ONLY RAMP SANDBOX" / "Ramp: Not connected" status pending (@frontend). Live sandbox read BLOCKED (no credentials).
+- FS-19 UI — "AI OFF" badge from /api/integrations/ai/status (@frontend).
 
 ## Next
 - FS-21 hardening (check:provenance prep committed 9440132/eedd507), FS-22 deployment (requires human approval), FS-23 pitch/docs
@@ -35,6 +36,10 @@
 - FS-08 UI — edge inspector + review (commit 4c69130)
 - FS-16 UI — runbook checklist (commit 3bace82)
 - FS-17 — MVP lock: reset control, golden-path e2e, README (commit 2790251)
+- frontend Lows — inspector focus return, checklist copy (640bc23)
+- FS-20 UI — alert center (d25aef4)
+- FS-19 — AI suggestions, AI OFF by default (fe6e55a)
+- FS-18 backend — read-only Ramp sandbox adapter, mocked API only (bf18d61)
 
 ## Blockers
 - FS-18 live sandbox sync: BLOCKED — no Ramp sandbox credentials available (mocked-API implementation only).
@@ -243,3 +248,27 @@
 - QA: FAIL (README setup could not seed; stale scripts table) → README rewritten → accuracy fixes (FS-18/19 described as not implemented; KPI link claim; demo:setup re-run caveat; "potential interruption") → PASS.
 - Limitations: see README "Known limitations" (unauthenticated demo identities, LAN Host spoofing unless start:local, frozen-clock snoozes, DAILY funds, not-found HTTP 200, repository-level immutability).
 - Commit: 2790251
+
+## FS-20 — 2026-11-04
+- Status: PASS
+- Implemented: backend (10ed651) — Alert model via additive migration 20261104091245_alerts; one alert per material transition (CREATED risky-only, ESCALATED, DEESCALATED, RECLASSIFIED, RESOLVED, REOPENED) recorded in materializeIncidents' transaction; idempotent (T-13 preserved); demo-gated audited ack/snooze bounded by the demo clock; "In-app only: no external notification sent", no Slack/email/webhook code. UI (d25aef4) — top-bar bell with active count, modal drawer (Active/History, counts, snooze hint, demo identity), per-alert kind/severity/source/owner/link, ack and 1/3/7-day snooze from the server clock.
+- Commands: alerts tests 14; full chain lint/typecheck/test(649)/build/e2e(78/78) exit 0 (QA).
+- QA: backend PASS with 1 Medium (silent reopen) → fixed → PASS; UI PASS.
+- Limitations: snoozes do not expire under the frozen demo clock (UI explains); copy nit "a UNKNOWN unknown data incident".
+- Commit: 10ed651, d25aef4
+
+## FS-19 — 2026-11-04
+- Status: PASS (AI OFF mode; live model calls BLOCKED — no LLM key)
+- Implemented: AI off unless LLM_API_KEY + LLM_MODEL; suggester "ai" without them → 503 AI_OFF, zero network calls. Prompt: taxonomy-matched findings only (omittedFindings counted), strict semver versions, URL credentials stripped, bounded. Strict output schema with grounding (HALLUCINATED_SOURCE, TOKEN_NOT_IN_TAXONOMY, PROVIDER_TOKEN_MISMATCH, UNKNOWN_NODE, PROVIDER_VENDOR_MISMATCH). Accepted → SUGGESTED edges with MODEL_SUGGESTED evidence, confirmable only via FS-08 review. AI_ERROR → explicitly labeled rules fallback, redacted errors. Fetch-based OpenAI-style caller, mocked only.
+- Commands: llm/ai/manifest tests; pnpm test 649; e2e 78/78 (QA); fetch stubbed → 0 calls without key.
+- QA: FAIL (git-URL credentials in versions; twilio/express pinned to CloudComms) → FAIL (secret-shaped names, prerelease tags) → PASS.
+- Limitations: never exercised against a real model endpoint; in AI mode, rules matches the model omits are not suggested (documented); "AI OFF" badge UI pending.
+- Commit: fe6e55a
+
+## FS-18 backend — 2026-11-04
+- Status: backend PASS; task OPEN (UI label pending); live sandbox sync BLOCKED — no credentials
+- Implemented: sandbox-only base URL; read scopes only, never vault; GET-only to allow-listed paths + token POST; foreign/vault page.next blocked; PAN/CVV payloads refused; sync only in an empty RAMP_SANDBOX workspace (pnpm ramp:init --confirm), DEMO → 409; state=ALL + state=DECLINED; unknowns null; SUGGESTED BACKS/PAYS; idempotent; PARTIAL/FAILED honest (FAILED → 502); no demo fallback; not configured → 503 with zero fetches. Ramp endpoint details confirmed from docs.ramp.com text mirrors (cited in code); cursor param name and /cards/virtual unconfirmed (failure → PARTIAL).
+- Commands: ramp-adapter tests; QA recording-fetch probes (exactly token POST + 5 GETs; no writes).
+- QA: PASS with 1 Medium (non-sandbox host labeled sandbox) → sandbox-only fix → PASS.
+- Docs note: Ramp documents a `transactions.declined` webhook (contrary to the blueprint's caution); out of scope — polling used.
+- Commit: bf18d61
