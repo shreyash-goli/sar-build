@@ -2,8 +2,8 @@
 
 ## Now
 - MVP FS-00–FS-17 COMPLETE. FS-19, FS-20, FS-21 COMPLETE.
-- FS-18 — implementation complete (bf18d61 backend, b257c94 UI); status BLOCKED for live sandbox read (no credentials) per the blueprint, so the box stays unchecked.
-- FS-23 — demo script, feature provenance appendix, final QA (in progress).
+- FS-18 — implementation complete (bf18d61, b257c94); BLOCKED for live sandbox read (no credentials).
+- FS-23 — docs complete and QA-passed (DEMO_SCRIPT, FEATURE_PROVENANCE, ARCHITECTURE); OPEN only for the recorded 90s–2min pitch and screenshots, which the presenter must record (deferred, not fabricated).
 - FS-22 — deployment: awaiting explicit human approval and target host.
 
 ## Next
@@ -44,6 +44,8 @@
 - fix(providers) honest 'used' when model skipped (f5bfb08); fix(alerts) message wording (36d320a)
 - FS-18/19 UI — integrations panel (b257c94)
 - FS-21 — security hardening + regression suite (2099af7)
+- fix(security) TRUST_PROXY + write-route table (09ee71a); fix(frontend) ramp empty state, pure formatUtc, redacted logs (9b2f71d)
+- FS-23 docs — demo script, feature provenance, architecture (see FS-23 entry)
 
 ## Blockers
 - FS-18 live sandbox sync: BLOCKED — no Ramp sandbox credentials available (mocked-API implementation only).
@@ -290,3 +292,11 @@
 - Commands (QA): `pnpm verify` exit 0 (681 tests; check:provenance zero problems); `pnpm build && pnpm test:e2e` 80/80 (first attempt interrupted by host sleep, re-run under caffeinate); curl probes: cross-origin/port-mismatch/null-origin/cross-site → 403, no-Origin → gate only, 17 KB body with and without Content-Length → 400, broken DB → generic 500 with secret-free logs.
 - QA: PASS. Lows queued: X-Forwarded-Host trusted without a proxy flag (CSRF still holds for browsers); README lacks a write-route auth table.
 - Commit: 2099af7
+
+## FS-23 (docs) — 2026-11-04
+- Status: docs PASS; task OPEN pending presenter-recorded pitch video and screenshots (deliberately not fabricated).
+- Implemented: docs/DEMO_SCRIPT.md (timed ≈2-minute script, setup, impact hypothesis stated as unmeasured, grounded judge answers incl. what real Ramp integration would require, fallbacks); docs/FEATURE_PROVENANCE.md (FP-01–FP-20 → provenance status, commits, proving tests; explicit "not claimed" list); docs/ARCHITECTURE.md (data flow, rule ids, key decisions with enforcement points, module boundaries).
+- QA: rehearsal of the script on a production build from reset — every value and phrase matched the app ($450.00 = $2,450.00 − $2,000.00 due in 2 days; +$600 → $2,600 / $0.00 / $150.00, Critical→Low; "Executed externally: Never"; decline "not a confirmed outage"; alerts in-app only), 0 console errors; all 30 cited commit hashes and test files exist. Initial FAIL (no impact hypothesis, no Ramp-requirements list, screenshots) → fixed → PASS; ARCHITECTURE nits (rule evidence class, graph DB entry points, security deps, transaction claim) corrected.
+- Final gates on the working tree (QA): lint, typecheck, pnpm test 683/683, pnpm test:e2e 80/80 with check:provenance + build in the webServer chain.
+- Deferred: screenshots and a recorded demo video (presenter).
+- Note: an orphaned `next-server` (pid 48075, started 2026-11-03 22:30, listening on :3000) was found running from the repo; it was not started by any teammate and was left untouched. It now serves a replaced .next and should be restarted or stopped by the user.
