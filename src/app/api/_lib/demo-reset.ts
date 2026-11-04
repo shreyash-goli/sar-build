@@ -33,11 +33,14 @@ function hostnameOf(value: string): string | null {
   }
 }
 
+/** Loopback plus DEMO_RESET_ALLOWED_HOSTS, each entry normalized like the request Host (scheme/port stripped, lowercased). */
 export function allowedResetHosts(env: Env): Set<string> {
   const extra = (env.DEMO_RESET_ALLOWED_HOSTS ?? "")
     .split(",")
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
+    .map((h) => h.trim())
+    .filter(Boolean)
+    .map(hostnameOf)
+    .filter((h): h is string => h !== null && h !== "");
   return new Set([...LOOPBACK, ...extra]);
 }
 

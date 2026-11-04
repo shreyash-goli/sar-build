@@ -100,6 +100,17 @@ describe("authorized local reset", () => {
     expect((await reset({ host: "demo-box.lan:3000" }, { ...DEMO, DEMO_RESET_ALLOWED_HOSTS: "demo-box.lan, other.lan" })).status).toBe(200);
     expect((await reset({}, DEMO, "{}")).status).toBe(200);
   });
+
+  it("allow-list entries are normalized like the Host header (scheme, port, case, IPv6 brackets)", async () => {
+    const env = { ...DEMO, DEMO_RESET_ALLOWED_HOSTS: " Demo.Local:3000 , http://box.lan:8080/ ,[fd00::1]:3000" };
+    const { allowedResetHosts } = await import("@/app/api/_lib/demo-reset");
+    expect([...allowedResetHosts(env)].sort()).toEqual(["127.0.0.1", "::1", "box.lan", "demo.local", "fd00::1", "localhost"]);
+    expect((await reset({ host: "demo.local:3000" }, env)).status).toBe(200);
+    expect((await reset({ host: "DEMO.LOCAL" }, env)).status).toBe(200);
+    expect((await reset({ host: "box.lan:3000", origin: "http://box.lan:3000" }, env)).status).toBe(200);
+    expect((await reset({ host: "[fd00::1]:3000" }, env)).status).toBe(200);
+    expect((await reset({ host: "evil.local:3000" }, env)).status).toBe(403);
+  });
 });
 
 describe("refusals (nothing changes)", () => {
