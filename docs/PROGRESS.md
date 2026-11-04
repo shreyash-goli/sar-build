@@ -1,13 +1,11 @@
 # Progress
 
 ## Now
-- FS-08 — graph inspector & reviewer controls UI (@frontend); backend committed a8e37ef
-- FS-16 — runbook checklist UI on incident detail (@frontend, after FS-08); backend committed d31ede2
-- FS-09 — manifest import (backend done, QA queued); UI later
-- FS-17 — demo reset API (@backend); then hero Playwright golden path + README/demo docs
+- MVP gate FS-00–FS-17 COMPLETE (FS-17 commit 2790251).
+- Post-MVP: FS-20 alerts UI (@frontend; backend committed 10ed651); FS-19 AI suggestions in "AI OFF" mode with rules fallback (@backend); FS-18 read-only Ramp adapter with mocked tests (@backend).
 
 ## Next
-- FS-17 MVP lock (after FS-08, FS-16 UI) → then optional FS-18–FS-23 (FS-18/19 need credentials/keys → BLOCKED unless provided)
+- FS-21 hardening (check:provenance prep committed 9440132/eedd507), FS-22 deployment (requires human approval), FS-23 pitch/docs
 
 ## Done
 - FS-00 — runnable repository (commit c7ec96f)
@@ -31,9 +29,17 @@
 - FS-12 — Overview dashboard (commit fecd3dd)
 - FS-13 — incident list & detail (commit 6afda58)
 - FS-14 UI + FS-15 UI — Response Studio with approvals (commit 83e38ee)
+- FS-20 backend — in-app alerts (commit 10ed651); FS-21 prep check:provenance (9440132, eedd507)
+- FS-09 — safe manifest discovery (commit c78e77d; fixes e2959c9)
+- FS-17 backend — demo reset API (5fbe260; fixes fde1e7a, 4f0f8ef; start:local 33a7bfa)
+- FS-08 UI — edge inspector + review (commit 4c69130)
+- FS-16 UI — runbook checklist (commit 3bace82)
+- FS-17 — MVP lock: reset control, golden-path e2e, README (commit 2790251)
 
 ## Blockers
-- None
+- FS-18 live sandbox sync: BLOCKED — no Ramp sandbox credentials available (mocked-API implementation only).
+- FS-19 live model calls: BLOCKED — no LLM key; product runs in clearly labeled AI OFF mode.
+- FS-22 deployment: requires explicit human approval before any external deployment.
 
 ## Log
 <!-- YYYY-MM-DD — what changed -->
@@ -206,3 +212,34 @@
 ## Process notes — 2026-11-04
 - Concurrent e2e runs share `.next`; per-port DBs (e2e-${PORT}.db) isolate data only. Rule adopted: no build/typecheck/e2e in the repo without explicit orchestrator go; builders use isolated scratch copies.
 - Commit-boundary deviations (documented in commit messages): FS-11 before FS-05; FS-07 graph API inside FS-05 commit; FS-14+FS-15 UI combined; FS-16 runbook wiring inside FS-13.
+
+## FS-09 — 2026-11-04
+- Status: PASS
+- Implemented: pure static parsers for package.json / docker-compose / Terraform (no execution, file system or network); bare filenames, format/size/line/file-count caps; curated taxonomy (real providers unmatched, never invent vendors); SUGGESTED LOW OPTIONAL edges with MANIFEST evidence citing file:line + sha256; demo-workspace and bundled-sample imports are DEMO_FIXTURE ("Fictional sample file."); dedupe respecting reviewer REJECT; audit + risk re-materialization; POST /api/imports/manifest (demo check before body read).
+- Commands: manifest + provenance tests 64; pnpm test 588; QA probes: hostile scripts never read, YAML billion-laughs inert, 250 KB lines ~1 ms, path traversal rejected, re-import after REJECT stays REJECTED, confirmed risk unchanged.
+- QA: FAIL (fictional sample shown as Observed) → fixed → PASS; Low fixed (e2959c9).
+- Limitations: no import UI (not required by FS-09); manifest suggestions need FS-08 review to count.
+- Commit: c78e77d (+ e2959c9)
+
+## FS-08 — 2026-11-04
+- Status: PASS
+- Implemented: backend review API (a8e37ef, fee02f2) and UI edge inspector: "Why this edge exists" (evidence excerpt, method, source system, timestamps, badges, Open in Sources), review form only on SUGGESTED edges with required justification and demo-identity note; confirm creates USER_VERIFIED evidence and promotes the edge; reject removes it from possible impacts; both audited; graph and impact refresh.
+- Commands: e2e graph-review 4/4 within 74/74 clean (QA); isolated committed tree 608/608.
+- QA: PASS. Low queued: restore focus to trigger after Escape.
+- Commit: 4c69130 (backend a8e37ef)
+
+## FS-16 — 2026-11-04
+- Status: PASS
+- Implemented: runbook-v1 rules (d31ede2) rendered on incident detail: next owner ("Unassigned" when none), disclaimer, numbered manual steps with owners, dependencies, unknowns and copyable text.
+- Commands: runbook.spec + incidents.spec within 74/74 clean (QA); clipboard copy verified by mouse and keyboard.
+- QA: PASS. Low queued: whole-checklist copy double-numbers steps.
+- Commit: 3bace82 (backend d31ede2)
+
+## FS-17 — 2026-11-04 — MVP LOCK
+- Status: PASS
+- Implemented: POST /api/demo/reset (DEMO_MODE + loopback Host + same-origin; 5fbe260, fde1e7a, 4f0f8ef); shell Reset demo control with confirm dialog; pnpm start:local (127.0.0.1); pnpm demo:setup; tests/e2e/hero.spec.ts golden path (T-21); README rewritten.
+- Commands (QA, exact FS-17 verify): `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` → exit 0; 608 unit/integration; 74/74 e2e incl. hero.spec. Literal README setup on a clean clone (no .env/dev.db/.next/generated client): install → cp .env.example .env → demo:setup → dev → every page and read API 200 with zero keys; start:local listens on 127.0.0.1 only.
+- UX evidence: dashboard $450.00 → incident ($2,450.00 − $2,000.00) → exact graph path → Sources DEMO DATA → +$600 → $0.00 / $150.00 margin SIMULATION ONLY → APPROVED FOR DEMO, executed externally never → incident still $450.00 → UI reset → seeded state, 3 alerts.
+- QA: FAIL (README setup could not seed; stale scripts table) → README rewritten → accuracy fixes (FS-18/19 described as not implemented; KPI link claim; demo:setup re-run caveat; "potential interruption") → PASS.
+- Limitations: see README "Known limitations" (unauthenticated demo identities, LAN Host spoofing unless start:local, frozen-clock snoozes, DAILY funds, not-found HTTP 200, repository-level immutability).
+- Commit: 2790251

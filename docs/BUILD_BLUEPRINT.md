@@ -488,14 +488,14 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Hero risk path is legible at 1440x900; clicking a vendor highlights every confirmed downstream workflow; healthy and unknown paths are visually distinct.  
 **Verify:** manually exercise graph; add a Playwright screenshot/assertion for a selected path.
 
-### [ ] FS-08 — Graph provenance inspector and reviewer controls
+### [x] FS-08 — Graph provenance inspector and reviewer controls
 **Depends on:** FS-07.  
 **Build:** Node/edge details drawer showing evidence snippet, method (`MANUAL`, `MANIFEST`, `MODEL`), timestamps, and reviewer status. Allow a simulated/admin review action to confirm or reject *suggested* edges and audit it. Never invent evidence on confirmation; require a human justification.  
 **Files:** `src/components/graph/inspector.tsx`, review API, tests.  
 **Done when:** Clicking `CloudComms → OTP gateway` explains why the edge exists; review changes graph style and impact calculation.  
 **Verify:** unit and UI test for confirm/reject transitions with audit events.
 
-### [ ] FS-09 — Add safe repository-manifest discovery
+### [x] FS-09 — Add safe repository-manifest discovery
 **Depends on:** FS-08.  
 **Build:** Import static example `package.json` and optional `docker-compose.yml` / Terraform `.tf` text (do NOT execute); use safe parsers / bounded text extraction to suggest provider-service dependencies. Example: `twilio` npm dependency suggests a possible SMS integration, **not** proof it is production-critical or card-funded. Deduplicate, cap upload size, reject unsupported formats, prohibit arbitrary file-system paths/remote fetch.  
 **Files:** `src/lib/providers/manifest-import.ts`, import API, `src/fixtures/sample-repo/**`, tests.  
@@ -546,14 +546,14 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** No proposed action is shown as executed; after approval only the simulated plan changes; action history survives navigation.  
 **Verify:** tests for invalid transition, missing approver, duplicate approval, audit coverage, unchanged funds.
 
-### [ ] FS-16 — Add practical response runbooks and ownership
+### [x] FS-16 — Add practical response runbooks and ownership
 **Depends on:** FS-15.  
 **Build:** Rules-based runbook per risk type: confirm billing method, contact finance fund owner, request limit review, verify alternate payment route, contact service owner, monitor vendor billing/service state. Make runbook steps copyable. Do not claim that contacting a vendor or raising a budget is automatic.  
 **Files:** `src/lib/actions/runbooks.ts`, incident and studio components, tests.  
 **Done when:** Each hero incident has a specific checklist and next owner, with dependencies/unknowns shown.  
 **Verify:** runbook mapping tests; manual happy-path copy.
 
-### [ ] FS-17 — Lock the complete no-credentials MVP demo
+### [x] FS-17 — Lock the complete no-credentials MVP demo
 **Depends on:** FS-12–FS-16.  
 **Build:** One-click reset on demo workspace, seed determinism, toast/error behavior, loading states, coherent dashboard-to-graph-to-studio navigation. Add Playwright full golden-path test. Ensure no blank/loading screen after first page.  
 **Files:** `tests/e2e/hero.spec.ts`, reset API, README/demo docs.  
