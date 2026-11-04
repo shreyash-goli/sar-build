@@ -1,10 +1,11 @@
 # Progress
 
 ## Now
-- FS-04 — seed Northstar Labs (@backend, in progress; fixture + clock drafted)
+- FS-05 — evidence ledger & Sources page (@backend API done, @frontend page in progress)
+- FS-10 — charge/fund projection (@backend, in progress)
 
 ## Next
-- FS-05 (after FS-04) → FS-06; FS-10 after FS-04
+- FS-06 after FS-05; FS-11 after FS-06 + FS-10
 - FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
 
 ## Done
@@ -13,6 +14,8 @@
 - FS-02 — provenance & data-contract types (commit 10d2d07)
 - FS-01 follow-up (commits 9de418d, f60135c)
 - FS-03 — persistent normalized database (commit 6d82325)
+- fix(graph) — verified evidence for every confirmed edge (commit f002912)
+- FS-04 — Northstar seed & reset (commit 0bd17d0)
 
 ## Blockers
 - None
@@ -70,6 +73,25 @@
 - Files: prisma/schema.prisma, prisma/migrations/20261104064525_init/**, prisma.config.ts, src/lib/{db,env}.ts, src/lib/repositories/**, src/lib/security/write-gate.ts, tests/integration/repositories.test.ts, tests/unit/{edge-policy,env,write-gate}.test.ts, package.json (+@prisma/adapter-libsql 7.10.1, db:generate/db:deploy/postinstall; build/typecheck run prisma generate), .env.example (ADMIN_TOKEN), .gitignore (/src/generated/), eslint.config.mjs.
 - Commands: prisma validate PASS; prisma migrate dev --name init applied, re-run "Already in sync"; prisma migrate status up to date; pnpm test 217/217 (incl. FS-04 prep tests); pnpm test -- repositories 33/33; lint, typecheck, build PASS.
 - QA: initial PASS with 1 Medium (RULE/DERIVED evidence could confirm edges) + 4 Low → fixed → re-verify PASS. QA clean-clone check: frozen offline install regenerates client, typecheck/build/test pass with no .env/dev.db; dev.db sha1 unchanged by tests.
-- Limitations: immutability enforced at repository layer only (no SQLite triggers; raw Prisma client can still update evidence); direct CONFIRMED create on unverified MANUAL/API evidence still allowed (fix queued with FS-04); first API route may need serverExternalPackages for libSQL; Prisma CLI does not read .env (defaults match .env.example).
+- Limitations: immutability enforced at repository layer only (no SQLite triggers; raw Prisma client can still update evidence); direct CONFIRMED create on unverified MANUAL/API evidence still allowed (fixed in f002912); first API route may need serverExternalPackages for libSQL; Prisma CLI does not read .env (defaults match .env.example).
 - Commit: 6d82325
 - Next: FS-04
+
+## fix(graph) — 2026-11-03
+- Status: PASS
+- Implemented: any CONFIRMED edge needs USER_VERIFIED evidence unless evidence is FIXTURE+DEMO_FIXTURE and the write is not a promotion; closes delete-and-recreate bypass (QA FS-03 residual).
+- Files: src/lib/repositories/{edge-policy,index}.ts, tests/unit/edge-policy.test.ts, tests/integration/repositories.test.ts.
+- Commands: pnpm test 242/242; lint; tsc. QA probe cases 1a–1n all as intended.
+- QA: PASS. Info: any gated writer can still create FIXTURE evidence (stays labeled demo); possible future tightening to DEMO mode only.
+- Commit: f002912
+
+## FS-04 — 2026-11-03
+- Status: PASS
+- Implemented: src/fixtures/northstar-demo.json (scenarios A–D, all fictional; 1 workspace, 3 funds, 3 cards, 4 vendors, 3 charges, 3 transactions, 18 nodes, 15 edges = 14 CONFIRMED / 1 SUGGESTED / 0 REJECTED, 49 FIXTURE/DEMO_FIXTURE/UNVERIFIED evidence records, one per record). Hero: fund-auth limit 400000 / available 200000, CloudComms charge 245000 due 2026-11-19T16:00:00Z, checkout edge DEGRADED. B: WebhookWorks DECLINED, local SPEND_LIMIT wording, edge MEDIUM confidence with potential-impact caveat. C: ComputeHarbor healthy. D: MetricsRelay billing UNKNOWN, no funding source. No precomputed incidents/simulations/proposals. Seed = transactional "ensure" (never overwrites; drift aborts → run reset). demo:reset = DEMO_MODE-only gated clear + reseed in one transaction (admin token cannot reset). Demo clock: getNow/resolveDemoClock/DEFAULT_DEMO_NOW. CLI defaults DEMO_MODE only if undefined.
+- Files: src/fixtures/{northstar-demo.json,northstar.ts}, src/lib/demo/{northstar,cli-env}.ts, src/lib/time.ts, prisma/seed.ts, scripts/reset-demo.ts, prisma.config.ts, package.json, src/lib/repositories/index.ts, tests/integration/{seed,repositories}.test.ts, tests/unit/{fixtures,time}.test.ts. (Repository tx-client + demoReset.clearAllData additions landed early in 6d82325; reviewed under FS-04.)
+- Source inputs: BUILD_BLUEPRINT.md section 3 demo dataset.
+- Commands: pnpm db:seed && pnpm demo:reset && pnpm test -- fixtures → 28 PASS; second db:seed creates 0 rows; two consecutive resets → byte-identical sqlite dumps; DEMO_MODE=false / blank / 0 → reset refuses exit 1 with DB unchanged; FS-04 commit alone in clean worktree: 256/256 tests.
+- QA: initial PASS with 4 Low (blank DEMO_MODE defaulted to true and could wipe; UI/server demo-clock mismatch; WebhookWorks edge lacked uncertainty; per-incident delete lacked demo gate) → all fixed → re-verify PASS.
+- Limitations: rule lineage/incidents regenerate only once FS-11/FS-14 exist; shell still to switch to resolveDemoClock (in progress with FS-05 frontend); after fixture changes an existing dev.db needs one `pnpm demo:reset` before `db:seed` (drift guard by design).
+- Commit: 0bd17d0
+- Next: FS-05, FS-10

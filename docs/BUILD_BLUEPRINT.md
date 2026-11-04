@@ -458,7 +458,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** CRUD round trips work and immutable evidence/audit records cannot be casually overwritten by generic update helper paths.  
 **Verify:** `pnpm prisma validate` (or `pnpm exec prisma validate`), `pnpm exec prisma migrate dev`, repository tests.
 
-### [ ] FS-04 — Seed Northstar Labs with exact golden-path values
+### [x] FS-04 — Seed Northstar Labs with exact golden-path values
 **Depends on:** FS-03.  
 **Build:** Implement scenarios A–D, graph nodes, source/evidence records, and deterministic fixed demo clock. Seed/reset operations must be idempotent and transactional; reset must clear simulated proposals/incidents and regenerate them through actual logic, not precompute false results. Write fixture consistency tests.  
 **Files:** `src/fixtures/northstar-demo.json`, `prisma/seed.ts`, `scripts/reset-demo.ts`, `src/lib/time.ts`, tests.  
