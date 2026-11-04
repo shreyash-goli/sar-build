@@ -86,6 +86,7 @@ describe("hero scenario A (T-01)", () => {
       "evidence:ev-fund-auth",
     ]);
     expect(p.assumptions.length).toBeGreaterThan(0);
+    expect(p.availabilityObservedAt).toBe("2026-11-17T15:45:00Z");
   });
 
   it("a +$600 allocation removes the shortfall and leaves a $150 margin (T-02 arithmetic)", () => {

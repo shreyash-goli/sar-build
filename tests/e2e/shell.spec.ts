@@ -4,11 +4,14 @@ import { expect, test, type Page } from "@playwright/test";
 // DEMO_NOW=2026-11-17T16:00:00Z.
 
 const ROUTES = [
-  { path: "/dashboard", nav: "Overview", heading: "Overview", placeholder: true },
+  // Overview reads engine results (FS-12).
+  { path: "/dashboard", nav: "Overview", heading: "Overview", placeholder: false },
   // Graph reads the real graph (FS-07); covered by graph.spec.ts.
   { path: "/graph", nav: "Dependency Graph", heading: "Dependency Graph", placeholder: false },
-  { path: "/incidents", nav: "Incidents", heading: "Incidents", placeholder: true },
-  { path: "/scenarios", nav: "Response Studio", heading: "Response Studio", placeholder: true },
+  // Incidents reads engine results (FS-13).
+  { path: "/incidents", nav: "Incidents", heading: "Incidents", placeholder: false },
+  // Response Studio reads incidents and simulations (FS-14).
+  { path: "/scenarios", nav: "Response Studio", heading: "Response Studio", placeholder: false },
   // Sources reads the real ledger (FS-05); covered by sources.spec.ts.
   { path: "/sources", nav: "Sources", heading: "Sources", placeholder: false },
 ] as const;

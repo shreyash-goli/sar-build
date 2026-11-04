@@ -69,6 +69,8 @@ type Common = {
   evidenceIds: string[];
   /** Same, as typed references for RiskAssertion.inputs ("evidence:<id>"). */
   inputs: string[];
+  /** fund.observedAt of the availability reading used (null when no matching fund). */
+  availabilityObservedAt: string | null;
 };
 
 export type ScoredProjection = Common & {
@@ -161,6 +163,8 @@ export function projectCharge({ charge, vendor, fund, now, priorCharges = [] }: 
       evaluatedAt: iso(now),
       evidenceIds: ids,
       inputs: ids.map((id) => `evidence:${id}`),
+      availabilityObservedAt:
+        fund && fund.id === charge.fundingSourceId ? new Date(fund.observedAt).toISOString().replace(".000Z", "Z") : null,
     };
   };
 
