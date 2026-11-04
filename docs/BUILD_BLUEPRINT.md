@@ -481,7 +481,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** `fund-auth` reaches login and checkout using precise path IDs; rejected and suggested edges are excluded from confirmed blast radius.  
 **Verify:** unit tests for linear graph, branching graph, cycle, orphan, suggested edge, rejected edge.
 
-### [ ] FS-07 — Build the visually compelling dependency graph
+### [x] FS-07 — Build the visually compelling dependency graph
 **Depends on:** FS-06, FS-01.  
 **Build:** React Flow canvas with card/fund/vendor/service/workflow node styles; horizontal layers, labels, icons, overview minimap/fit controls, search, zoom, filters, node click and highlighted end-to-end paths. Display solid confirmed edges, dashed suggested edges and muted healthy branches.  
 **Files:** `src/app/(app)/graph/page.tsx`, `src/components/graph/**`, `src/app/api/graph/**`.  

@@ -1,10 +1,10 @@
 # Progress
 
 ## Now
-- FS-07 — dependency graph UI (@frontend polish: edge labels, side panel) → QA → commit (backend half committed in 71cc33f)
 - FS-12 — Overview dashboard (backend QA PASS, Lows being fixed; @frontend UI drafted)
 - FS-13 — incident detail (backend QA PASS, Lows being fixed; UI next)
-- FS-14 — simulation engine + Response Studio (@backend started)
+- FS-14 — Response Studio UI (@frontend, after FS-13); backend committed 90c9099
+- FS-15 — approval-gated actions + audit trail (@backend in progress)
 
 ## Next
 - FS-08 after FS-07; FS-15 after FS-14; FS-16 after FS-15; FS-17 after FS-12–FS-16
@@ -21,7 +21,10 @@
 - FS-10 — charge/fund projection (commit 911ce62)
 - FS-06 — graph algorithms (commit 810eb35; FS-05 dependency is documentation-only — code does not import FS-05)
 - FS-11 — risk engine & incidents (commit 9a0cf99; committed before FS-05 because FS-05 tests read FS-11 rule evidence)
-- FS-05 — evidence ledger & Sources inspector, incl. FS-07 graph API backend (commit 71cc33f)
+- FS-05 — evidence ledger & Sources inspector, incl. FS-07 graph API backend and per-port e2e DB (commit 71cc33f)
+- FS-14 backend — simulation engine + scenarios API (commit 90c9099)
+- FS-07 — dependency graph UI (commit 9c3c961)
+- FS-05 inspector follow-up — lineage status + demo-input trust line (commit fb1a416)
 
 ## Blockers
 - None
@@ -141,3 +144,23 @@
 - QA: initial FAIL (High: Playwright starts webServer before globalSetup, which deleted the open e2e.db → 30/34 fail; Medium: "Nothing shown is live or demo data" above 49 demo records) → fixed → re-verify PASS (43/43). Ledger add-on (superseded lineage, demo-input badge) PASS.
 - Limitations: freshness lists all evidence per request (fine at demo scale); e2e shell.spec in this commit asserts /graph as a data route, which the FS-07 UI commit completes; graph API + Sources share this commit.
 - Commit: 71cc33f
+
+## FS-14 backend — 2026-11-04
+- Status: PASS (backend half; Response Studio UI pending)
+- Implemented: src/lib/simulations — structuredClone snapshot, validated SimulationPatch (4 kinds with feasibility checks), same evaluateRisk before/after, per-incident diff, changedInputs, assumptions ("Modeled change; no Ramp funds or card limits were changed"), ruleVersion, label SIMULATION ONLY. runSimulation writes only an append-only Simulation (isDemo) + simulation.run AuditEvent in one transaction. POST /api/scenarios/run (400/404/403/503), GET /api/scenarios.
+- Files: src/lib/simulations/**, src/app/api/_lib/scenarios.ts, src/app/api/scenarios/**, tests/unit/simulation.test.ts, tests/integration/scenarios-api.test.ts.
+- Commands: simulation+scenarios 21/21; pnpm test 483; lint; tsc; isolated committed tree 441/441.
+- Evidence: T-02 +$600 → available 260000, shortfall 0, margin 15000, hero CRITICAL → NO_RISK/LOW; T-03 full sqlite dump hash identical after 3 runs + 11 rejected (excluding simulation/audit rows).
+- QA: PASS, 1 Low (limit wording when limitCents unknown) — fixed in working tree, pending commit.
+- Limitations: no rate limit on simulation POST in demo mode; each run appends (exploration log, no dedupe).
+- Commit: 90c9099
+
+## FS-07 — 2026-11-04
+- Status: PASS
+- Implemented: /graph React Flow view on loadGraph(): deterministic 6-column layout, kind icons, minimap/zoom/fit, search, filters, deep links; vendor selection highlights confirmed downstream workflows (computeBlastRadius) + upstream funding chain; possible impacts separate; exact-path isolation; solid/dashed/dotted edges; 11px relation pills; canonical needs-mapping in amber "not a risk rating"; node evidence with View source; non-canvas path list; keyboard + aria-live. Backend half (GET /api/graph) committed in 71cc33f.
+- Files: src/app/(app)/graph/**, src/components/graph/**, tests/e2e/graph.spec.ts, tests/unit/graph-model.test.ts.
+- Commands: lint, typecheck, build, pnpm test 486, e2e 48/48 clean (QA); isolated committed tree tsc + lint + 459/459.
+- UX evidence (QA, 1440x900): all six hero nodes legible in one row at fit zoom ≈0.71; clicking CloudComms highlights Account login (potential interruption) + Customer checkout (potential degradation), auto-scrolls 168px so impacts/paths/evidence are visible (instant under reduced motion); MetricsRelay amber "Needs mapping" with 3 reasons; no "at risk" wording; overflow 0 at 320–1024px.
+- QA: PASS with 2 Low (7px edge labels; panel below fold) → fixed → final PASS. Side panel deliberately not used (would drop fit zoom to ≈0.5).
+- Limitations: no risk colouring until incidents are wired into the graph; REQUIRES pill slightly overlaps OTP node border (cosmetic).
+- Commit: 9c3c961 (+ inspector follow-up fb1a416)
