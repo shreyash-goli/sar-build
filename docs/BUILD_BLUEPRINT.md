@@ -585,7 +585,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** Same input evaluated twice produces one alert; a changed risk generates a new timeline entry; ack works.  
 **Verify:** duplicate/reclassification tests and UI.
 
-### [ ] FS-21 — Production-grade hardening and automated regression suite
+### [x] FS-21 — Production-grade hardening and automated regression suite
 **Depends on:** FS-17; include FS-18–FS-20 only if implemented.  
 **Build:** Review auth of server writes, route protections, input limits, client/server secret separation, DB errors, HTTP error rendering, provenance completeness, logging redaction, sanitization, path/cycle bounds and accessibility. Add smoke tests and the provenance checker.  
 **Files:** tests, middleware/auth utility, `scripts/check-provenance.ts`, docs.  

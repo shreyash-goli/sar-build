@@ -1,9 +1,10 @@
 # Progress
 
 ## Now
-- MVP gate FS-00–FS-17 COMPLETE (2790251). FS-19 (fe6e55a) and FS-20 (10ed651 + d25aef4) COMPLETE.
-- FS-18 — backend committed bf18d61; UI "READ-ONLY RAMP SANDBOX" / "Ramp: Not connected" status pending (@frontend). Live sandbox read BLOCKED (no credentials).
-- FS-19 UI — "AI OFF" badge from /api/integrations/ai/status (@frontend).
+- MVP FS-00–FS-17 COMPLETE. FS-19, FS-20, FS-21 COMPLETE.
+- FS-18 — implementation complete (bf18d61 backend, b257c94 UI); status BLOCKED for live sandbox read (no credentials) per the blueprint, so the box stays unchecked.
+- FS-23 — demo script, feature provenance appendix, final QA (in progress).
+- FS-22 — deployment: awaiting explicit human approval and target host.
 
 ## Next
 - FS-21 hardening (check:provenance prep committed 9440132/eedd507), FS-22 deployment (requires human approval), FS-23 pitch/docs
@@ -40,6 +41,9 @@
 - FS-20 UI — alert center (d25aef4)
 - FS-19 — AI suggestions, AI OFF by default (fe6e55a)
 - FS-18 backend — read-only Ramp sandbox adapter, mocked API only (bf18d61)
+- fix(providers) honest 'used' when model skipped (f5bfb08); fix(alerts) message wording (36d320a)
+- FS-18/19 UI — integrations panel (b257c94)
+- FS-21 — security hardening + regression suite (2099af7)
 
 ## Blockers
 - FS-18 live sandbox sync: BLOCKED — no Ramp sandbox credentials available (mocked-API implementation only).
@@ -272,3 +276,17 @@
 - QA: PASS with 1 Medium (non-sandbox host labeled sandbox) → sandbox-only fix → PASS.
 - Docs note: Ramp documents a `transactions.declined` webhook (contrary to the blueprint's caution); out of scope — polling used.
 - Commit: bf18d61
+
+## FS-18 / FS-19 UI — 2026-11-04
+- Status: PASS
+- Implemented: /sources Integrations panel from public status APIs — "Ramp sandbox: Not connected" with missing variable names (never values), "READ-ONLY RAMP SANDBOX" + host + last sync when configured, sync button only when syncAllowed (never in DEMO); "AI OFF: no LLM key configured. Showing rules-based suggestions."; RAMP_SANDBOX workspace chip reads "READ-ONLY RAMP SANDBOX".
+- QA: three server configs (no keys / keys + DEMO / RAMP_SANDBOX via ramp:init on a scratch copy); secret values absent from HTML and APIs; e2e 80/80. PASS. Low queued: empty RAMP_SANDBOX ledger copy still suggests db:seed.
+- Commit: b257c94
+- FS-18 overall: BLOCKED — live sandbox read untested (no credentials); mocked-API verification only; documented in README.
+
+## FS-21 — 2026-11-04
+- Status: PASS
+- Implemented: write gate → same-origin CSRF guard → 16 KiB stream-capped JSON body on all 11 POST routes; boundaries unit test over every "use client" import graph; generic 500s across all API families; redactSecrets/logServerError in API and scripts; GET smoke suite on a seeded temp DB; `pnpm verify`; check:provenance runs before every e2e build.
+- Commands (QA): `pnpm verify` exit 0 (681 tests; check:provenance zero problems); `pnpm build && pnpm test:e2e` 80/80 (first attempt interrupted by host sleep, re-run under caffeinate); curl probes: cross-origin/port-mismatch/null-origin/cross-site → 403, no-Origin → gate only, 17 KB body with and without Content-Length → 400, broken DB → generic 500 with secret-free logs.
+- QA: PASS. Lows queued: X-Forwarded-Host trusted without a proxy flag (CSRF still holds for browsers); README lacks a write-route auth table.
+- Commit: 2099af7
