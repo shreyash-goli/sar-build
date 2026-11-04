@@ -15,6 +15,7 @@ import {
 } from "@/components/evidence/query";
 import { SourcesFilters } from "@/components/evidence/sources-filters";
 import { UnresolvedWarning } from "@/components/evidence/unresolved-warning";
+import { IntegrationsPanel } from "@/components/integrations/integrations-panel";
 import { getModeChipCopy, ModeChip } from "@/components/layout/mode-chip";
 import { readShellContext } from "@/components/layout/shell-context";
 import { buttonVariants } from "@/components/ui/button";
@@ -62,6 +63,8 @@ export default async function Page({
         <span>{getModeChipCopy(chip.mode).description}</span>
         {chip.hint ? <span className="text-subtle">· {chip.hint}</span> : null}
       </p>
+
+      <IntegrationsPanel />
 
       <UnresolvedWarning unresolved={ledger.unresolved} />
 

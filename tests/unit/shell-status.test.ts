@@ -215,7 +215,7 @@ describe("resolveChipMode: the chip describes the data on screen", () => {
   it("only a workspace row can make the chip claim sandbox or live", () => {
     const sandbox = resolveChipMode(demoOff(), { status: "available", workspaceMode: "RAMP_SANDBOX" });
     expect(sandbox).toMatchObject({ mode: "RAMP_SANDBOX", hint: null, basis: "workspace" });
-    expect(getModeChipCopy(sandbox.mode).label).toBe("SANDBOX DATA");
+    expect(getModeChipCopy(sandbox.mode).label).toBe("READ-ONLY RAMP SANDBOX");
 
     const live = resolveChipMode(demoOn(), { status: "available", workspaceMode: "RAMP_LIVE_READONLY" });
     expect(getModeChipCopy(live.mode).label).toBe("RAMP LIVE (READ-ONLY)");
