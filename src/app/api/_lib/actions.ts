@@ -30,9 +30,14 @@ const DEMO_ONLY = "Response actions are available only in demo mode (DEMO_MODE=t
 
 /** Demo gate, then same-origin check, then the size-limited JSON body (FS-21). */
 async function readBody<S extends z.ZodType>(request: Request, schema: S, env: Env): Promise<z.output<S>> {
-  return readAuthorizedJsonBody(request, schema, () => {
-    if (!isDemoModeEnabled(env)) throw new WriteForbiddenError(DEMO_ONLY);
-  });
+  return readAuthorizedJsonBody(
+    request,
+    schema,
+    () => {
+      if (!isDemoModeEnabled(env)) throw new WriteForbiddenError(DEMO_ONLY);
+    },
+    { env },
+  );
 }
 
 function parseId(id: string): string {

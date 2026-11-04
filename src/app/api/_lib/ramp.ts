@@ -59,7 +59,7 @@ export function rampSyncHandler(request: Request, ctx: RampContext): Promise<Res
       throw new ApiFailure("NOT_CONFIGURED", cfg.reason, { reason: "RAMP_NOT_CONFIGURED", missing: cfg.missing });
     }
     assertRequestWritesAllowed(request, ctx.env);
-    assertSameOriginWrite(request);
+    assertSameOriginWrite(request, ctx.env);
     const read = createReadOnlyRepositories(ctx.db);
     const [workspace] = await read.workspaces.list();
     if (workspace?.mode !== "RAMP_SANDBOX") {

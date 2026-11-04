@@ -107,6 +107,18 @@ Prisma 7 + SQLite (libSQL adapter), Zod 4, Vitest, Playwright.
   accepts `ADMIN_TOKEN`), refuses cross-origin browser requests, and reads at most 16 KiB of JSON
   (manifest import: its own larger cap). Unexpected errors return a generic `500 Internal error`
   without stack traces; server logs redact credentials, tokens and secret environment values.
+  CSRF check: a request with an `Origin` header must match the `Host` header (host and port);
+  `X-Forwarded-Host` counts only with `TRUST_PROXY=true`.
+
+  | Write route (POST) | Gate | CSRF | Body limit |
+  | --- | --- | --- | --- |
+  | `/api/actions/propose`, `/api/actions/[id]/{submit,approve,reject}` | `DEMO_MODE` | Origin = Host | 16 KiB JSON |
+  | `/api/alerts/[id]/{ack,snooze}` | `DEMO_MODE` | Origin = Host | 16 KiB JSON |
+  | `/api/graph/edges/[id]/review` | `DEMO_MODE` | Origin = Host | 16 KiB JSON |
+  | `/api/scenarios/run` | `DEMO_MODE` | Origin = Host | 16 KiB JSON |
+  | `/api/imports/manifest` | `DEMO_MODE` | Origin = Host | ~2.5 MiB JSON (up to 5 files of 256 KiB each) |
+  | `/api/integrations/ramp/sync` | `DEMO_MODE` or `ADMIN_TOKEN` (503 if Ramp not configured) | Origin = Host | no body read |
+  | `/api/demo/reset` | `DEMO_MODE` + loopback `Host` | Origin = Host | empty or `{}` |
 - **AI-assisted suggestions (FS-19) are optional and OFF by default.** With `LLM_API_KEY` and
   `LLM_MODEL` set (an OpenAI-style chat-completions endpoint via `LLM_BASE_URL`, tested with mocked
   responses only; the server must support JSON mode via `response_format`), a manifest import with

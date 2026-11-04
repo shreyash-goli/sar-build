@@ -5,7 +5,8 @@
  *   refused before reading, and the stream is cancelled as soon as the limit is passed
  *   (a missing or lying Content-Length cannot make the server buffer more).
  * - Cross-site browser writes are refused (CSRF): `Sec-Fetch-Site: cross-site`, an opaque
- *   `Origin: null`, or an Origin whose host differs from the request host. Requests without
+ *   `Origin: null`, or an Origin whose host:port differs from the Host header (X-Forwarded-Host
+ *   is trusted only with TRUST_PROXY=true, i.e. behind a proxy that sets it). Requests without
  *   an Origin header (curl, server-to-server, tests) are not browser-initiated cross-site
  *   writes and are judged by the write gate alone.
  */
@@ -16,6 +17,7 @@ import { ApiFailure } from "./http";
 /** Default limit for JSON write bodies (all current request schemas are far smaller). */
 export const MAX_JSON_BODY_BYTES = 16 * 1024;
 
+type Env = Readonly<Record<string, string | undefined>>;
 type LimitOptions = { maxBytes?: number; reason?: string };
 
 function tooLarge(maxBytes: number, reason: string): ApiFailure {
@@ -66,8 +68,11 @@ export async function readJsonBody<S extends z.ZodType>(
 
 const firstHost = (h: string | null) => h?.split(",")[0]?.trim().toLowerCase() || null;
 
+/** X-Forwarded-Host is client-controllable unless a trusted proxy overwrites it. */
+export const trustsProxy = (env: Env) => env.TRUST_PROXY?.trim().toLowerCase() === "true";
+
 /** Refuse browser-initiated cross-site writes (see module comment). */
-export function assertSameOriginWrite(request: Request): void {
+export function assertSameOriginWrite(request: Request, env: Env = process.env): void {
   if (request.headers.get("sec-fetch-site") === "cross-site") throw new WriteForbiddenError("Write refused: cross-site request");
   const origin = request.headers.get("origin");
   if (origin === null) return;
@@ -78,7 +83,11 @@ export function assertSameOriginWrite(request: Request): void {
   } catch {
     throw new WriteForbiddenError("Write refused: invalid Origin header");
   }
-  const hosts = [firstHost(request.headers.get("x-forwarded-host")), firstHost(request.headers.get("host")), new URL(request.url).host.toLowerCase()];
+  const hosts = [firstHost(request.headers.get("host")) ?? new URL(request.url).host.toLowerCase()];
+  if (trustsProxy(env)) {
+    const forwarded = firstHost(request.headers.get("x-forwarded-host"));
+    if (forwarded) hosts.push(forwarded);
+  }
   if (!hosts.includes(originHost)) throw new WriteForbiddenError("Write refused: cross-origin request");
 }
 
@@ -90,9 +99,9 @@ export async function readAuthorizedJsonBody<S extends z.ZodType>(
   request: Request,
   schema: S,
   gate: () => void,
-  options: LimitOptions & { invalidMessage?: string } = {},
+  options: LimitOptions & { invalidMessage?: string; env?: Env } = {},
 ): Promise<z.output<S>> {
   gate();
-  assertSameOriginWrite(request);
+  assertSameOriginWrite(request, options.env);
   return readJsonBody(request, schema, options);
 }

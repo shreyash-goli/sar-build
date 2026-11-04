@@ -64,6 +64,7 @@ export function importManifestHandler(request: Request, ctx: ImportContext): Pro
       maxBytes: MAX_IMPORT_REQUEST_BYTES,
       reason: "MANIFEST_TOO_LARGE",
       invalidMessage: "Invalid import",
+      env: ctx.env,
     });
     const now = getNow({ env: ctx.env });
     const ai = body.suggester === "ai" ? await aiPlanFor(ctx, body) : undefined;

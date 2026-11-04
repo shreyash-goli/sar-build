@@ -43,14 +43,26 @@ describe("redactSecrets (FS-21 logging)", () => {
 
 describe("assertSameOriginWrite (CSRF)", () => {
   const req = (headers: Record<string, string>, url = "http://localhost:3000/api/x") => new Request(url, { method: "POST", headers });
-  it("allows no-Origin (non-browser) and same-origin; honours a proxy's X-Forwarded-Host", () => {
-    expect(() => assertSameOriginWrite(req({}))).not.toThrow();
-    expect(() => assertSameOriginWrite(req({ origin: "http://localhost:3000", host: "localhost:3000" }))).not.toThrow();
-    expect(() => assertSameOriginWrite(req({ origin: "https://demo.example.app", host: "10.0.0.5:3000", "x-forwarded-host": "demo.example.app" }))).not.toThrow();
+  it("allows no-Origin (non-browser) and same-origin (Origin host:port == Host)", () => {
+    expect(() => assertSameOriginWrite(req({}), {})).not.toThrow();
+    expect(() => assertSameOriginWrite(req({ origin: "http://localhost:3000", host: "localhost:3000" }), {})).not.toThrow();
+    expect(() => assertSameOriginWrite(req({ origin: "http://localhost:3000" }), {})).not.toThrow(); // Host from the URL
+  });
+
+  it("X-Forwarded-Host is ignored by default and trusted only with TRUST_PROXY=true", () => {
+    const proxied = () => req({ origin: "https://demo.example.app", host: "10.0.0.5:3000", "x-forwarded-host": "demo.example.app" });
+    expect(() => assertSameOriginWrite(proxied(), {})).toThrow(WriteForbiddenError);
+    expect(() => assertSameOriginWrite(proxied(), { TRUST_PROXY: "false" })).toThrow(WriteForbiddenError);
+    expect(() => assertSameOriginWrite(proxied(), { TRUST_PROXY: "true" })).not.toThrow();
+    // A spoofed X-Forwarded-Host cannot whitelist an attacker origin by default.
+    const spoof = req({ origin: "https://evil.example", host: "localhost:3000", "x-forwarded-host": "evil.example" });
+    expect(() => assertSameOriginWrite(spoof, {})).toThrow(WriteForbiddenError);
+    // With TRUST_PROXY the Host match still works.
+    expect(() => assertSameOriginWrite(req({ origin: "http://localhost:3000", host: "localhost:3000" }), { TRUST_PROXY: "true" })).not.toThrow();
   });
   it("refuses other origins, other ports, opaque origins and cross-site fetches", () => {
     for (const h of [{ origin: "https://evil.example" }, { origin: "http://localhost:9999", host: "localhost:3000" }, { origin: "null" }, { "sec-fetch-site": "cross-site" }, { origin: "not a url" }] as Record<string, string>[]) {
-      expect(() => assertSameOriginWrite(req(h))).toThrow(WriteForbiddenError);
+      expect(() => assertSameOriginWrite(req(h), {})).toThrow(WriteForbiddenError);
     }
   });
 });

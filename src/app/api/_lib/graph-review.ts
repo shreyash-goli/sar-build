@@ -22,7 +22,7 @@ export function reviewEdgeHandler(request: Request, id: string, ctx: { db: Prism
     gate();
     const edgeId = IdSchema.safeParse(id);
     if (!edgeId.success) throw new ApiFailure("BAD_REQUEST", "Invalid edge id");
-    const body = await readAuthorizedJsonBody(request, EdgeReviewRequestSchema, gate, { invalidMessage: "Invalid review" });
+    const body = await readAuthorizedJsonBody(request, EdgeReviewRequestSchema, gate, { invalidMessage: "Invalid review", env: ctx.env });
     const now = getNow({ env: ctx.env });
     const data = await ctx.db.$transaction(
       (tx) => reviewEdge(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), edgeId.data, body, now),

@@ -49,7 +49,7 @@ async function mutate<S extends z.ZodType, T>(
   gate();
   const alertId = IdSchema.safeParse(id);
   if (!alertId.success) throw new ApiFailure("BAD_REQUEST", "Invalid alert id");
-  const body = await readAuthorizedJsonBody(request, schema, gate);
+  const body = await readAuthorizedJsonBody(request, schema, gate, { env: ctx.env });
   const now = getNow({ env: ctx.env });
   const data = await ctx.db.$transaction((tx) => fn(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), alertId.data, body, now));
   return jsonData(data, await buildMeta({ repos: createReadOnlyRepositories(ctx.db), env: ctx.env }));

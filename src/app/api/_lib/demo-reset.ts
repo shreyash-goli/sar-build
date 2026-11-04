@@ -80,7 +80,7 @@ export function demoResetHandler(request: Request, ctx: { db: PrismaClient; env:
   return handle(async () => {
     if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError("Demo reset requires DEMO_MODE=true on the server");
     assertLocalRequest(request, ctx.env);
-    assertSameOriginWrite(request); // FS-21: Origin must match the Host incl. port (no other localhost app)
+    assertSameOriginWrite(request, ctx.env); // FS-21: Origin must match the Host incl. port (no other localhost app)
     const text = await request.text();
     if (text.trim() !== "" && text.trim() !== "{}") throw new ApiFailure("BAD_REQUEST", "Demo reset takes no request body");
 

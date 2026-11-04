@@ -52,7 +52,7 @@ const HERO = "inc-charge-cloudcomms-20261119";
 const SECRET = "supersecret-db-token-7f3a91";
 const Envelope = apiSuccessSchema(z.unknown());
 const g = globalThis as unknown as { __failsafeDb?: PrismaClient };
-const ENV_KEYS = ["DATABASE_URL", "DEMO_MODE", "DEMO_NOW", "ADMIN_TOKEN", "RAMP_CLIENT_ID", "RAMP_CLIENT_SECRET", "LLM_API_KEY", "LLM_MODEL"] as const;
+const ENV_KEYS = ["DATABASE_URL", "DEMO_MODE", "DEMO_NOW", "ADMIN_TOKEN", "RAMP_CLIENT_ID", "RAMP_CLIENT_SECRET", "LLM_API_KEY", "LLM_MODEL", "TRUST_PROXY"] as const;
 
 let dir: string;
 let url: string;
@@ -206,13 +206,31 @@ describe("2. write-route auth table", () => {
     process.env.RAMP_CLIENT_ID = "cid";
     process.env.RAMP_CLIENT_SECRET = "csecret";
     for (const w of WRITE_ROUTES) {
-      for (const headers of [{ origin: "https://evil.example" }, { origin: "null" }, { "sec-fetch-site": "cross-site" }, { origin: "http://localhost:9999" }] as Record<string, string>[]) {
+      for (const headers of [{ origin: "https://evil.example" }, { origin: "null" }, { "sec-fetch-site": "cross-site" }, { origin: "http://localhost:9999" }, { origin: "https://evil.example", "x-forwarded-host": "evil.example" }] as Record<string, string>[]) {
         const res = await w.call(post(w.path, {}, headers));
         expect(res.status, `${w.route} ${JSON.stringify(headers)}`).toBe(403);
       }
     }
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await writeCount()).toEqual(before);
+  });
+
+  it("X-Forwarded-Host counts only with TRUST_PROXY=true", async () => {
+    const run = () =>
+      scenarioRun.POST(
+        post(
+          "/api/scenarios/run",
+          { incidentId: HERO, patch: { kind: "INCREASE_AVAILABLE_ALLOCATION", fundingSourceId: "fund-auth", amountCents: 60000 } },
+          { origin: "https://demo.example.app", "x-forwarded-host": "demo.example.app" },
+        ),
+      );
+    expect((await run()).status).toBe(403);
+    process.env.TRUST_PROXY = "true";
+    try {
+      expect((await run()).status).toBe(201);
+    } finally {
+      delete process.env.TRUST_PROXY;
+    }
   });
 
   it("same-origin browser requests are accepted (Origin matches Host)", async () => {

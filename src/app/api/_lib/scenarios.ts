@@ -24,7 +24,7 @@ export function runScenario(request: Request, { db, env }: ScenarioContext): Pro
     const demoGate = () => {
       if (!isDemoModeEnabled(env)) throw new WriteForbiddenError("Simulations are available only in demo mode (DEMO_MODE=true)");
     };
-    const body = await readAuthorizedJsonBody(request, ScenarioRunRequestSchema, demoGate, { invalidMessage: "Invalid simulation request" });
+    const body = await readAuthorizedJsonBody(request, ScenarioRunRequestSchema, demoGate, { invalidMessage: "Invalid simulation request", env });
     const now = getNow({ env });
     try {
       const data = await db.$transaction((tx) =>
