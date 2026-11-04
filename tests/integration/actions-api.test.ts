@@ -8,7 +8,7 @@ import { createDbClient, type PrismaClient } from "@/lib/db";
 import { ActionListDataSchema, ActionProposalViewSchema, ActionResponseDataSchema } from "@/lib/actions/schema";
 import { resetNorthstarDemo } from "@/lib/demo/northstar";
 import { createReadOnlyRepositories } from "@/lib/provenance/ledger";
-import type { Repositories } from "@/lib/repositories";
+import { createRepositories, type Repositories } from "@/lib/repositories";
 import { ApiErrorSchema, apiSuccessSchema } from "@/lib/schema";
 import { ScenarioRunDataSchema } from "@/lib/simulations/schema";
 import {
@@ -237,7 +237,14 @@ describe("validation", () => {
       (await (await runScenario(req({ incidentId: HERO, patch: plus600 }), ctx())).json()).data,
     ).simulation;
     const linked = await ok(await propose({ ...proposal, simulationId: sim.id }));
-    expect(linked.action.simulationId).toBe(sim.id);
+    expect(linked.action).toMatchObject({ simulationId: sim.id, simulatedAt: sim.createdAt });
+    expect(sim.createdAt).toBe(NOW);
+    const unlinked = await ok(await propose());
+    expect(unlinked.action).toMatchObject({ simulationId: null, simulatedAt: null });
+    const listed = apiSuccessSchema(ActionListDataSchema).parse(
+      await (await listActionsHandler(new Request(`http://localhost/api/actions?incidentId=${HERO}`), ctx())).json(),
+    ).data;
+    expect(listed.actions.find((a) => a.id === linked.action.id)!.simulatedAt).toBe(NOW);
     expect((await propose({ ...proposal, simulationId: "sim-nope" })).status).toBe(404);
     expect((await propose({ ...proposal, payload: { ...plus600, amountCents: 1000 }, simulationId: sim.id })).status).toBe(400);
   });
@@ -265,6 +272,33 @@ describe("reads", () => {
     expect((await getActionHandler("act-nope", ctx())).status).toBe(404);
     expect((await listActionsHandler(new Request("http://localhost/api/actions?foo=1"), ctx())).status).toBe(400);
     expect((await listActionsHandler(new Request("http://localhost/api/actions?incidentId=inc-nope"), ctx())).status).toBe(404);
+  });
+
+  it("an existing proposal with an unreadable audit trail is 500 ACTION_AUDIT_UNREADABLE, not 404", async () => {
+    // A row with no "action.proposed" audit entry (written directly, bypassing the service).
+    const raw = createRepositories(db, { writeGate: () => undefined, demoResetGate: () => undefined });
+    await raw.actionProposals.create({
+      id: "act-orphan",
+      incidentId: HERO,
+      kind: "INCREASE_AVAILABLE_ALLOCATION",
+      payloadJson: plus600,
+      state: "DRAFT",
+      approver: null,
+      simulated: true,
+      createdAt: NOW,
+    });
+    const res = await getActionHandler("act-orphan", ctx());
+    expect(res.status).toBe(500);
+    expect(await errorOf(res)).toEqual({
+      code: "INTERNAL_ERROR",
+      message: "Action exists but its audit trail could not be read",
+      details: { reason: "ACTION_AUDIT_UNREADABLE", actionId: "act-orphan" },
+    });
+    // Writes on it fail the same way instead of pretending it does not exist.
+    expect((await submit("act-orphan")).status).toBe(500);
+    // The list reports it as unreadable rather than dropping it.
+    const list = apiSuccessSchema(ActionListDataSchema).parse(await (await listActionsHandler(new Request("http://localhost/api/actions"), ctx())).json()).data;
+    expect(list.unreadableActionIds).toEqual(["act-orphan"]);
   });
 
   it("demo reset clears proposals and their audit trail", async () => {

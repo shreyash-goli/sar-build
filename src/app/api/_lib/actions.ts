@@ -114,7 +114,7 @@ export function listActionsHandler(request: Request, ctx: ActionsContext): Promi
 export function getActionHandler(id: string, ctx: ActionsContext): Promise<Response> {
   return handle(async () => {
     const repos = createReadOnlyRepositories(ctx.db);
-    const view = await viewById(repos, parseId(id));
+    const view = await viewById(repos, parseId(id)); // unreadable trail -> 500 ACTION_AUDIT_UNREADABLE
     if (!view) throw new NotFoundError("Action proposal", id);
     return jsonData(view, await buildMeta({ repos, env: ctx.env }));
   });

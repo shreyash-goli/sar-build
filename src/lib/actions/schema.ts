@@ -85,6 +85,8 @@ export const ActionProposalViewSchema = z.strictObject({
   proposedBy: z.string(),
   proposedAt: IsoDateTimeSchema,
   simulationId: z.string().nullable(),
+  /** createdAt of the linked simulation ("simulated at <time>"); null when not linked or the simulation is gone. */
+  simulatedAt: IsoDateTimeSchema.nullable(),
   simulated: z.literal(true),
   lifecycle: LifecycleSchema,
   /** Allowed next transitions from the current state. */

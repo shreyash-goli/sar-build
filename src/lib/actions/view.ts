@@ -1,6 +1,6 @@
 /** Builds ActionProposalView from the proposal row + its immutable audit trail (server-only). */
 import * as z from "zod";
-import type { Repositories } from "@/lib/repositories";
+import { RepositoryError, type Repositories } from "@/lib/repositories";
 import { ACTION_PROPOSAL_TRANSITIONS, ActionProposalState, type ActionProposal, type AuditEvent } from "@/lib/schema";
 import { ACTION_AUDIT, SIMULATION_ONLY_NOTICE, type ActionHistoryEntry, type ActionProposalView } from "./schema";
 
@@ -43,7 +43,11 @@ export function historyFor(actionId: string, audits: readonly AuditEvent[]): Act
 }
 
 /** null when the proposal has no readable "action.proposed" audit entry. */
-export function toView(p: ActionProposal, audits: readonly AuditEvent[]): ActionProposalView | null {
+export function toView(
+  p: ActionProposal,
+  audits: readonly AuditEvent[],
+  simulatedAtById: ReadonlyMap<string, string> = new Map(),
+): ActionProposalView | null {
   const history = historyFor(p.id, audits);
   const proposed = history.find((h) => h.action === ACTION_AUDIT.proposed);
   if (!proposed) return null;
@@ -60,6 +64,7 @@ export function toView(p: ActionProposal, audits: readonly AuditEvent[]): Action
     proposedBy: proposed.actor,
     proposedAt: proposed.at,
     simulationId,
+    simulatedAt: simulationId ? (simulatedAtById.get(simulationId) ?? null) : null,
     simulated: true,
     lifecycle: { proposed: true, approvedInDemo: p.state === "APPROVED_FOR_DEMO", executedExternally: false },
     allowedTransitions: [...ACTION_PROPOSAL_TRANSITIONS[p.state]],
@@ -68,8 +73,24 @@ export function toView(p: ActionProposal, audits: readonly AuditEvent[]): Action
   };
 }
 
+/** createdAt of every simulation for an incident, keyed by simulation id. */
+export async function simulatedAtFor(repos: Repositories, incidentId: string): Promise<Map<string, string>> {
+  return new Map((await repos.simulations.listByIncident(incidentId)).map((s) => [s.id, s.createdAt]));
+}
+
+/** The incident's proposal exists but its audit trail cannot be read (HTTP 500). */
+export class ActionAuditUnreadableError extends RepositoryError {
+  constructor(actionId: string) {
+    super("INTERNAL_ERROR", "Action exists but its audit trail could not be read", { reason: "ACTION_AUDIT_UNREADABLE", actionId });
+    this.name = "ActionAuditUnreadableError";
+  }
+}
+
+/** null only when the proposal does not exist; throws ActionAuditUnreadableError when its trail is unreadable. */
 export async function viewById(repos: Repositories, id: string): Promise<ActionProposalView | null> {
   const p = await repos.actionProposals.findById(id);
   if (!p) return null;
-  return toView(p, await repos.auditEvents.listBySubject(p.incidentId));
+  const view = toView(p, await repos.auditEvents.listBySubject(p.incidentId), await simulatedAtFor(repos, p.incidentId));
+  if (!view) throw new ActionAuditUnreadableError(id);
+  return view;
 }

@@ -72,8 +72,8 @@ async function audit(
 }
 
 async function respond(repos: Repositories, id: string, auditEventId: string | null): Promise<ActionResponseData> {
-  const view = await viewById(repos, id);
-  if (!view) throw new RepositoryError("INTERNAL_ERROR", "Action exists but its audit trail could not be read", { reason: "ACTION_AUDIT_UNREADABLE", actionId: id });
+  const view = await viewById(repos, id); // throws ActionAuditUnreadableError if the trail is unreadable
+  if (!view) throw new NotFoundError("Action proposal", id);
   return { action: view, auditEventId, idempotent: auditEventId === null, notice: SIMULATION_ONLY_NOTICE };
 }
 
