@@ -20,6 +20,8 @@ export type FsEdgeData = {
   edge: GraphEdge;
   emphasis: EdgeEmphasis;
   unknownLineage: boolean;
+  /** Open in the edge inspector. */
+  inspected?: boolean;
 };
 
 export type FsEdge = Edge<FsEdgeData, "fs">;
@@ -84,15 +86,15 @@ function GraphEdgeView(props: EdgeProps<FsEdge>) {
         path={path}
         markerEnd={markerEnd}
         style={{
-          stroke: strokeFor(data),
-          strokeWidth: highlighted ? baseWidth + 1 : baseWidth,
+          stroke: data.inspected ? "var(--info)" : strokeFor(data),
+          strokeWidth: data.inspected ? baseWidth + 2 : highlighted ? baseWidth + 1 : baseWidth,
           strokeDasharray:
             edge.reviewStatus === "REJECTED"
               ? "2 5"
               : dashed
                 ? "7 5"
                 : undefined,
-          opacity: emphasis === "muted" ? 0.2 : 1,
+          opacity: emphasis === "muted" && !data.inspected ? 0.2 : 1,
           transition: "opacity 150ms, stroke 150ms",
         }}
       />

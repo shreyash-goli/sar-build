@@ -12,6 +12,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  type EdgeChange,
   type NodeChange,
 } from "@xyflow/react";
 import { ChevronDown, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { GraphEdgeComponent, type EdgeEmphasis, type FsEdge } from "./graph-edge";
 import { GraphLegend } from "./graph-legend";
+import { EdgeInspector } from "./inspector";
 import { GraphNodeComponent, type FsNode, type NodeEmphasis } from "./graph-node";
 import {
   DEFAULT_REVIEW_FILTER,
@@ -116,6 +118,8 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
   const [kinds, setKinds] = React.useState<Set<NodeKind>>(() => new Set(KIND_ORDER));
   const [reviews, setReviews] = React.useState<Set<ReviewStatus>>(() => new Set(DEFAULT_REVIEW_FILTER));
   const [announcement, setAnnouncement] = React.useState("");
+  const [inspectedEdgeId, setInspectedEdgeId] = React.useState<string | null>(null);
+  const closeInspector = React.useCallback(() => setInspectedEdgeId(null), []);
 
   const visible = React.useMemo(() => applyFilters(graph, { kinds, reviewStatuses: reviews }), [graph, kinds, reviews]);
   // Blast radius always uses the full graph: filters change what is drawn, never what is true.
@@ -225,13 +229,26 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
       type: "fs",
       source: e.fromNodeId,
       target: e.toNodeId,
-      focusable: false,
-      selectable: false,
-      zIndex: emphasis === "none" || emphasis === "muted" ? 0 : 1,
+      // Focusable + selectable so Tab/Enter (and click) open the edge inspector.
+      focusable: true,
+      selectable: true,
+      selected: e.id === inspectedEdgeId,
+      ariaLabel: `Edge: ${nodeById.get(e.fromNodeId)?.label ?? e.fromNodeId} ${e.relation} ${
+        nodeById.get(e.toNodeId)?.label ?? e.toNodeId
+      }, ${REVIEW_STATUS_DISPLAY[e.reviewStatus].label.toLowerCase()}. Press Enter to inspect.`,
+      // data-* is valid on <g> but absent from React's SVG attribute types.
+      domAttributes: { "data-review-status": e.reviewStatus } as React.SVGAttributes<SVGGElement>,
+      zIndex: e.id === inspectedEdgeId ? 2 : emphasis === "none" || emphasis === "muted" ? 0 : 1,
       markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
-      data: { edge: e, emphasis, unknownLineage: unknown },
+      data: { edge: e, emphasis, unknownLineage: unknown, inspected: e.id === inspectedEdgeId },
     };
   });
+
+  // Edge selection (click or Enter on a focused edge) opens the inspector.
+  const onEdgesChange = (changes: EdgeChange<FsEdge>[]) => {
+    const picked = changes.find((c) => c.type === "select" && c.selected);
+    if (picked && "id" in picked) setInspectedEdgeId(picked.id);
+  };
 
   // Keyboard (Enter on a focused node) and mouse selection both arrive here.
   const onNodesChange = (changes: NodeChange<FsNode>[]) => {
@@ -243,8 +260,9 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
       }
       return;
     }
-    const cleared = changes.some((c) => c.type === "select" && !c.selected && c.id === selectedId);
-    if (cleared) select(null);
+    // Deselect events are ignored: React Flow emits them when an edge is clicked,
+    // and inspecting an edge must not drop the node's blast-radius view. The pane
+    // click and the "Clear selection" button clear it explicitly.
   };
 
   const fitTo = (ids: string[]) => {
@@ -278,6 +296,27 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
   const showPath = (p: ListedPath) => {
     select(p.startNodeId, p.pathId);
     fitTo(p.nodeIds);
+    document.getElementById("graph-canvas")?.scrollIntoView({ block: "nearest" });
+  };
+
+  // Look the inspected edge up in the FULL graph so a just-rejected (hidden) edge still shows its outcome.
+  const inspectedEdge = inspectedEdgeId ? (edgeById.get(inspectedEdgeId) ?? null) : null;
+  // Keep the inspected edge visible beside the drawer (right side on sm+, bottom sheet on mobile).
+  React.useEffect(() => {
+    if (!inspectedEdge) return;
+    const wide = window.matchMedia("(min-width: 640px)").matches;
+    void flow.fitView({
+      nodes: [{ id: inspectedEdge.fromNodeId }, { id: inspectedEdge.toNodeId }],
+      padding: wide
+        ? { top: "48px", bottom: "48px", left: "48px", right: "392px" }
+        : { top: "32px", left: "24px", right: "24px", bottom: "60%" },
+      maxZoom: 1,
+      duration: 300,
+    });
+  }, [inspectedEdge, flow]);
+
+  const inspectEdge = (edgeId: string) => {
+    setInspectedEdgeId(edgeId);
     document.getElementById("graph-canvas")?.scrollIntoView({ block: "nearest" });
   };
 
@@ -391,7 +430,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
         id="graph-canvas"
         data-testid="graph-canvas"
         ref={canvasRef}
-        className="relative h-[min(64vh,580px)] min-h-[360px] overflow-hidden rounded-xl border border-border bg-background xl:h-[440px]"
+        className="relative scroll-mt-24 h-[min(64vh,580px)] min-h-[360px] overflow-hidden rounded-xl border border-border bg-background xl:h-[440px]"
       >
         {visible.nodes.length === 0 ? (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted">
@@ -404,10 +443,15 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
-            onPaneClick={() => selectedId && select(null)}
+            onEdgesChange={onEdgesChange}
+            onEdgeClick={(_e, edge) => setInspectedEdgeId(edge.id)}
+            onPaneClick={() => {
+              if (inspectedEdgeId) setInspectedEdgeId(null);
+              else if (selectedId) select(null);
+            }}
             nodesDraggable={false}
             nodesConnectable={false}
-            edgesFocusable={false}
+            edgesFocusable
             elementsSelectable
             fitView
             fitViewOptions={{ padding: FIT_PADDING }}
@@ -468,6 +512,14 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
             )}
           </div>
         ) : null}
+        {inspectedEdge ? (
+          <EdgeInspector
+            edge={inspectedEdge}
+            nodeById={nodeById}
+            evidence={graph.evidence[inspectedEdge.evidenceId] ?? null}
+            onClose={closeInspector}
+          />
+        ) : null}
         {hiddenSelection ? (
           <p className="absolute bottom-3 left-14 rounded-md border border-warning/40 bg-surface px-2.5 py-1.5 text-xs text-foreground">
             The selected node is hidden by the current filters.
@@ -504,6 +556,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
         edgeById={edgeById}
         needsMapping={needsMapping}
         onShow={showPath}
+        onInspectEdge={inspectEdge}
       />
     </div>
   );

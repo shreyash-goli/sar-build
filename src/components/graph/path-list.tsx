@@ -13,12 +13,15 @@ export function PathList({
   edgeById,
   needsMapping,
   onShow,
+  onInspectEdge,
 }: {
   paths: ListedPath[];
   nodeById: ReadonlyMap<string, GraphNode>;
   edgeById: ReadonlyMap<string, GraphEdge>;
   needsMapping: ReadonlySet<string>;
   onShow: (path: ListedPath) => void;
+  /** Open the edge inspector (keyboard/screen-reader route to edge provenance). */
+  onInspectEdge?: (edgeId: string) => void;
 }) {
   return (
     <section aria-labelledby="path-list-title" className="flex flex-col gap-3">
@@ -42,7 +45,13 @@ export function PathList({
               className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex min-w-0 flex-col gap-1.5">
-                <PathChain nodeIds={p.nodeIds} edgeIds={p.edgeIds} nodeById={nodeById} edgeById={edgeById} />
+                <PathChain
+                  nodeIds={p.nodeIds}
+                  edgeIds={p.edgeIds}
+                  nodeById={nodeById}
+                  edgeById={edgeById}
+                  onInspectEdge={onInspectEdge}
+                />
                 <div className="flex flex-wrap gap-1.5">
                   {p.confirmed ? (
                     <Badge variant="success" className="normal-case tracking-normal">Confirmed</Badge>

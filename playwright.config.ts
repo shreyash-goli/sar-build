@@ -11,16 +11,33 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 // every run starts from the same state.
 const E2E_DATABASE_URL = `file:./e2e-${PORT}.db`;
 
+// Specs that change shared graph / incident state (edge reviews, manifest
+// imports, demo reset) run strictly after every read-only spec, so they can
+// never shift counts that other specs assert. Add future state-mutating
+// specs here. Simulation / action specs only append rows no other spec reads.
+const MUTATING = /(graph-review|hero)\.spec\.ts/;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
+  // One worker: mutating specs must never overlap each other (e.g. a demo
+  // reset in hero.spec would wipe state graph-review.spec is asserting).
+  workers: 1,
   retries: 0,
   reporter: "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: MUTATING },
+    {
+      name: "state-mutations",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: MUTATING,
+      dependencies: ["chromium"],
+    },
+  ],
   webServer: {
     command: `pnpm db:deploy && pnpm demo:reset && pnpm build && pnpm start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
