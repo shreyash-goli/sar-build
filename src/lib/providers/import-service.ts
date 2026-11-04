@@ -80,7 +80,9 @@ export async function importManifests(
     unrecognizedCount: 0,
   };
   const handledEdges = new Set<string>();
-  const useAi = options.ai?.status === "OK";
+  // AI is "used" only if the model was actually called (never claim AI when nothing was sent).
+  const useAi = options.ai?.status === "OK" && options.ai.modelCalled;
+  const modelSkipped = options.ai?.status === "OK" && !options.ai.modelCalled;
 
   // Candidates: (finding, provider, explanation?) pairs from the rules matcher or validated AI output.
   type Candidate = {
@@ -210,7 +212,12 @@ export async function importManifests(
     requested,
     used: useAi ? ("AI" as const) : ("RULES" as const),
     status: options.ai?.status === "AI_ERROR" ? ("AI_ERROR" as const) : ("OK" as const),
-    message: options.ai?.status === "AI_ERROR" ? `${options.ai.message}. Rules-based suggestions were used instead.` : null,
+    message:
+      options.ai?.status === "AI_ERROR"
+        ? `${options.ai.message}. Rules-based suggestions were used instead.`
+        : modelSkipped
+          ? "No references matched the built-in provider list, so the model was not called. Rules-based suggestions were used."
+          : null,
     rejected: options.ai?.rejected ?? [],
     omittedFindings: options.ai?.omittedFindings ?? null,
   };

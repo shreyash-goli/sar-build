@@ -157,6 +157,22 @@ describe("AI configured (mocked model)", () => {
     for (const secret of ["sk-live-abcdefghijklmnop", "supersecret", "AKIAIOSFODNN7EXAMPLEKEY", "ghp_abcdefghijklmnopqrst"]) expect(sent).not.toContain(secret);
   });
 
+  it("no taxonomy match: the model is not called and the response says RULES, not AI", async () => {
+    const m = mockCaller(JSON.stringify({ suggestions: [good] }));
+    const files = [{ filename: "package.json", content: JSON.stringify({ name: "x", dependencies: { express: "4.0.0", lodash: "4.17.21" } }) }];
+    const d = Envelope.parse(await (await post(body({ files }), AI_ENV, m.caller)).json()).data;
+    expect(m.calls).toEqual([]);
+    expect(d.suggester).toEqual({
+      requested: "ai",
+      used: "RULES",
+      status: "OK",
+      message: "No references matched the built-in provider list, so the model was not called. Rules-based suggestions were used.",
+      rejected: [],
+      omittedFindings: 2,
+    });
+    expect(d.suggested).toEqual([]);
+  });
+
   it("an AI suggestion cannot silently become confirmed; only a human review confirms it", async () => {
     await post(body(), AI_ENV, mockCaller(JSON.stringify({ suggestions: [good] })).caller);
     const writer = createRepositories(db, { writeGate: () => undefined, demoResetGate: () => undefined });

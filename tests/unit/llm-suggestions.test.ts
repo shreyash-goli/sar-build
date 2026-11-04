@@ -116,7 +116,7 @@ describe("prompt versions: semver-like only, credentials never sent", () => {
       return out();
     });
     expect(called).toBe(false);
-    expect(plan).toEqual({ status: "OK", accepted: [], rejected: [], message: null, omittedFindings: 1 });
+    expect(plan).toEqual({ status: "OK", accepted: [], rejected: [], message: null, omittedFindings: 1, modelCalled: false });
   });
 
   it("strips scheme://user:pass@ anywhere in the prompt text (defence in depth)", () => {

@@ -74,7 +74,15 @@ export type RejectedSuggestion = {
 };
 
 export type AiPlan =
-  | { status: "OK"; accepted: LlmSuggestion[]; rejected: RejectedSuggestion[]; message: null; omittedFindings: number }
+  | {
+      status: "OK";
+      accepted: LlmSuggestion[];
+      rejected: RejectedSuggestion[];
+      message: null;
+      omittedFindings: number;
+      /** false when no reference matched the taxonomy, so nothing was sent and the model was not called. */
+      modelCalled: boolean;
+    }
   | { status: "AI_ERROR"; accepted: []; rejected: RejectedSuggestion[]; message: string; omittedFindings: number };
 
 const SECRETISH = /(sk-[A-Za-z0-9]{8,}|ghp_[A-Za-z0-9]{8,}|AKIA[0-9A-Z]{12,}|xox[abpr]-|-----BEGIN|[A-Za-z0-9+/]{40,})/;
@@ -204,7 +212,7 @@ export async function planAiSuggestions(ctx: SuggestionContext, caller: ModelCal
   const prompt = buildPrompt(ctx);
   const { omittedFindings } = prompt;
   // Nothing recognisable to explain: the model is not called at all.
-  if (prompt.sentFindings === 0) return { status: "OK", accepted: [], rejected: [], message: null, omittedFindings };
+  if (prompt.sentFindings === 0) return { status: "OK", accepted: [], rejected: [], message: null, omittedFindings, modelCalled: false };
   let raw: string;
   try {
     raw = await caller({ system: prompt.system, user: prompt.user, maxTokens: MODEL_MAX_TOKENS, timeoutMs: MODEL_TIMEOUT_MS });
@@ -215,7 +223,7 @@ export async function planAiSuggestions(ctx: SuggestionContext, caller: ModelCal
   if (v.accepted.length === 0 && v.rejected.some((r) => r.reason === "SCHEMA")) {
     return { status: "AI_ERROR", accepted: [], rejected: v.rejected, message: "AI output was rejected: it did not match the required JSON schema", omittedFindings };
   }
-  return { status: "OK", accepted: v.accepted, rejected: v.rejected, message: null, omittedFindings };
+  return { status: "OK", accepted: v.accepted, rejected: v.rejected, message: null, omittedFindings, modelCalled: true };
 }
 
 /**
