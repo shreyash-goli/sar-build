@@ -5,9 +5,10 @@
  *   confidenceTier LOW, dependencyStrength OPTIONAL (strength cannot be read from
  *   a manifest; the evidence says so). Deterministic id edge-<vendor>--<service>.
  * - Evidence: kind MANIFEST, UNVERIFIED, path = filename, contentHash = sha256 of the file.
- *   Classification: DEMO_FIXTURE in the fictional DEMO workspace (synthetic data must
- *   always be labelled as such), EXTERNAL_OBSERVED otherwise (user-supplied content).
- *   Content identical to a bundled sample-repo file is called out as a fictional sample.
+ *   Classification: DEMO_FIXTURE for any bundled fictional sample-repo file (in ANY
+ *   workspace) and for everything imported into the fictional DEMO workspace (synthetic
+ *   data must always be labelled as such); EXTERNAL_OBSERVED for user-supplied content
+ *   elsewhere. Sample content is also called out in the excerpt.
  * - Dedupe: if an edge (from, to, POWERS) already exists in ANY status, nothing is
  *   written (a reviewer's REJECTED decision is respected on re-import). Within
  *   one import, the first reference wins.
@@ -56,7 +57,7 @@ export async function importManifests(repos: Repositories, req: ManifestImportRe
 
   const at = iso(now);
   const [workspace] = await repos.workspaces.list();
-  const classification = workspace?.mode === "DEMO" ? "DEMO_FIXTURE" : "EXTERNAL_OBSERVED";
+  const workspaceIsDemo = workspace?.mode === "DEMO";
   const out: Omit<ManifestImportData, "auditEventId" | "notice" | "incidents"> = {
     serviceNodeId: service.id,
     files: parsed.map((p) => ({ filename: p.file.filename, format: p.manifest.format, bytes: p.manifest.bytes, sha256: p.sha256, findings: p.manifest.findings.length })),
@@ -69,7 +70,9 @@ export async function importManifests(repos: Repositories, req: ManifestImportRe
 
   for (const { file, manifest, sha256: fileHash } of parsed) {
     out.unrecognizedCount += manifest.unparsedReferences;
-    const sampleNote = SAMPLE_HASHES.has(`${file.filename}#${fileHash}`) ? "Fictional sample file. " : "";
+    const isSample = SAMPLE_HASHES.has(`${file.filename}#${fileHash}`);
+    const sampleNote = isSample ? "Fictional sample file. " : "";
+    const classification = isSample || workspaceIsDemo ? "DEMO_FIXTURE" : "EXTERNAL_OBSERVED";
     for (const f of manifest.findings) {
       if (!f.provider) {
         out.unrecognizedCount += 1;

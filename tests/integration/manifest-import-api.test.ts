@@ -138,14 +138,15 @@ describe("classification outside the DEMO workspace", () => {
     expect(entry).toMatchObject({ classification: "EXTERNAL_OBSERVED", display: { category: "observed", badge: null } });
   });
 
-  it("the bundled sample imported outside DEMO is EXTERNAL_OBSERVED but labelled as a fictional sample", async () => {
+  it("the bundled sample is DEMO_FIXTURE even outside DEMO (it is fictional by definition)", async () => {
     const raw = createRepositories(db, { writeGate: () => undefined, demoResetGate: () => undefined });
     const [ws] = await raw.workspaces.list();
     await raw.workspaces.update(ws!.id, { mode: "RAMP_SANDBOX" });
     const d = await ok(await post(sample));
     const ev = await repos.evidence.getById(d.suggested.find((s) => s.edgeId === CC_EDGE)!.evidenceId);
-    expect(ev.classification).toBe("EXTERNAL_OBSERVED");
+    expect(ev.classification).toBe("DEMO_FIXTURE");
     expect(ev.excerpt).toMatch(/^Fictional sample file\./);
+    expect(await getEvidenceLedgerEntry(repos, ev.id)).toMatchObject({ display: { badge: { label: "DEMO DATA" } } });
   });
 });
 
