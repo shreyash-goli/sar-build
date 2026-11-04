@@ -4,19 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "prisma generate && next typegen && tsc --noEmit",
     "test": "node scripts/vitest.mjs",
     "test:e2e": "playwright test",
     "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "demo:reset": "tsx scripts/reset-demo.ts",
-    "check:provenance": "tsx scripts/check-provenance.ts"
+    "check:provenance": "tsx scripts/check-provenance.ts",
+    "postinstall": "prisma generate"
   },
   "packageManager": "pnpm@12.16.1",
   "dependencies": {
+    "@prisma/adapter-libsql": "7.10.1",
     "@prisma/client": "^7.10.1",
     "@xyflow/react": "^12.12.1",
     "class-variance-authority": "^0.7.1",

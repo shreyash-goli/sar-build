@@ -1,0 +1,414 @@
+// FailSafe normalized domain model (docs/BUILD_BLUEPRINT.md Section 2).
+//
+// Contract: mirrors the Zod schemas in src/lib/schema/** exactly (field names,
+// enum values). Rules:
+// - Every blueprint `field?` is a nullable column with NO default. Unknown
+//   values stay NULL; they are never defaulted to 0.
+// - Money is integer cents stored as BigInt (64-bit). Prisma `Int` is 32-bit
+//   (max ~$21.4M) and would truncate the safe-integer range Zod accepts.
+//   Repositories convert BigInt <-> number within Number.MAX_SAFE_INTEGER.
+// - *Json columns are TEXT; repositories serialize/validate with Zod.
+// - EvidenceRecord and AuditEvent are append-only: the repositories expose no
+//   update/delete helpers, and evidence cannot be deleted while referenced
+//   (onDelete: Restrict). Simulation and ActionProposal have no delete helpers;
+//   they are removed only by the cascade from the incident delete used by
+//   demo reset (incidents.deleteForDemoReset). DB-level immutability triggers
+//   are not implemented (known limitation).
+// - IDs are caller-supplied strings (UUIDs for generated rows; readable
+//   deterministic IDs allowed for seed data). Never display names.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------- Enums (mirror src/lib/schema/enums.ts) ----------
+
+enum WorkspaceMode {
+  DEMO
+  RAMP_SANDBOX
+  RAMP_LIVE_READONLY
+}
+
+enum SourceClass {
+  DEMO_FIXTURE
+  RAMP_SANDBOX
+  EXTERNAL_OBSERVED
+  MODEL_SUGGESTED
+  DERIVED
+  UNKNOWN
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  USER_VERIFIED
+  REJECTED
+}
+
+enum EvidenceMethod {
+  MANUAL
+  MANIFEST
+  MODEL
+  FIXTURE
+  API
+  RULE
+}
+
+enum NodeKind {
+  FUND
+  CARD
+  VENDOR
+  SERVICE
+  WORKFLOW
+  OUTCOME
+}
+
+enum Criticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  UNKNOWN
+}
+
+enum EdgeRelation {
+  BACKS
+  PAYS
+  POWERS
+  REQUIRES
+  AFFECTS
+}
+
+enum DependencyStrength {
+  HARD
+  DEGRADED
+  OPTIONAL
+}
+
+enum ReviewStatus {
+  CONFIRMED
+  SUGGESTED
+  REJECTED
+}
+
+enum ConfidenceTier {
+  HIGH
+  MEDIUM
+  LOW
+  UNKNOWN
+}
+
+enum FundingProvider {
+  RAMP
+  DEMO
+}
+
+enum FundingInterval {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  TOTAL
+  UNKNOWN
+}
+
+enum PaymentInstrumentKind {
+  VIRTUAL_CARD
+  PHYSICAL_CARD
+  UNKNOWN
+}
+
+enum PaymentInstrumentStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+  UNKNOWN
+}
+
+enum BillingMethod {
+  CARD
+  INVOICE
+  UNKNOWN
+}
+
+enum ChargeStatus {
+  SCHEDULED
+  FORECAST
+  RESCHEDULED
+  CLEARED
+  DECLINED
+  CANCELLED
+}
+
+enum TransactionState {
+  PENDING
+  CLEARED
+  DECLINED
+  REVERSED
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  UNKNOWN
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  MONITORING
+  RESOLVED
+}
+
+enum SimulationPatchKind {
+  INCREASE_AVAILABLE_ALLOCATION
+  ASSIGN_ALTERNATE_FUND
+  MARK_CHARGE_RESCHEDULED
+  MARK_DEPENDENCY_VERIFIED
+}
+
+enum ActionProposalState {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED_FOR_DEMO
+  REJECTED
+}
+
+// ---------- Models ----------
+
+model Workspace {
+  id   String        @id
+  name String
+  mode WorkspaceMode
+}
+
+/// Append-only via repositories (no update/delete helpers). Explains why a record, edge or risk exists.
+model EvidenceRecord {
+  id                 String             @id
+  kind               EvidenceMethod
+  sourceSystem       String
+  sourceId           String
+  capturedAt         DateTime
+  observedAt         DateTime?
+  excerpt            String?
+  path               String?
+  contentHash        String?
+  classification     SourceClass
+  verificationStatus VerificationStatus
+
+  fundingSources     FundingSource[]
+  paymentInstruments PaymentInstrument[]
+  vendors            Vendor[]
+  vendorCharges      VendorCharge[]
+  transactions       Transaction[]
+  nodes              Node[]
+  edges              Edge[]
+  incidents          Incident[]
+
+  /// Idempotent re-ingest of the same source snapshot.
+  @@unique([sourceSystem, sourceId, capturedAt])
+  @@index([classification])
+}
+
+model FundingSource {
+  id             String          @id
+  provider       FundingProvider
+  externalFundId String?         @unique
+  name           String
+  interval       FundingInterval
+  limitCents     BigInt?
+  availableCents BigInt?
+  observedAt     DateTime
+  evidenceId     String
+
+  evidence           EvidenceRecord      @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  paymentInstruments PaymentInstrument[]
+  vendorCharges      VendorCharge[]
+  transactions       Transaction[]
+
+  @@index([evidenceId])
+}
+
+/// Card metadata only. Never PAN/CVV.
+model PaymentInstrument {
+  id              String                  @id
+  kind            PaymentInstrumentKind
+  externalCardId  String?                 @unique
+  fundingSourceId String?
+  status          PaymentInstrumentStatus
+  evidenceId      String
+
+  fundingSource FundingSource? @relation(fields: [fundingSourceId], references: [id], onDelete: SetNull)
+  evidence      EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@index([fundingSourceId])
+  @@index([evidenceId])
+}
+
+model Vendor {
+  id            String        @id
+  name          String
+  normalizedKey String        @unique
+  billingMethod BillingMethod
+  evidenceId    String
+
+  evidence         EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  charges          VendorCharge[]
+  transactions     Transaction[]
+  primaryIncidents Incident[]
+
+  @@index([evidenceId])
+}
+
+model VendorCharge {
+  id              String       @id
+  vendorId        String
+  fundingSourceId String?
+  expectedAt      DateTime
+  expectedCents   BigInt?
+  status          ChargeStatus
+  sourceClass     SourceClass
+  evidenceId      String
+
+  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  fundingSource FundingSource? @relation(fields: [fundingSourceId], references: [id], onDelete: SetNull)
+  evidence      EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@index([vendorId, expectedAt])
+  @@index([fundingSourceId])
+  @@index([evidenceId])
+}
+
+model Transaction {
+  id              String           @id
+  /// Idempotency key for ingest.
+  providerEventId String?          @unique
+  vendorId        String
+  fundingSourceId String?
+  occurredAt      DateTime
+  amountCents     BigInt
+  state           TransactionState
+  reason          String?
+  evidenceId      String
+
+  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  fundingSource FundingSource? @relation(fields: [fundingSourceId], references: [id], onDelete: SetNull)
+  evidence      EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@index([vendorId, occurredAt])
+  @@index([fundingSourceId])
+  @@index([evidenceId])
+}
+
+model Node {
+  id          String      @id
+  kind        NodeKind
+  label       String
+  criticality Criticality
+  owner       String?
+  evidenceId  String
+
+  evidence EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  outEdges Edge[]         @relation("EdgeFrom")
+  inEdges  Edge[]         @relation("EdgeTo")
+
+  @@index([kind])
+  @@index([evidenceId])
+}
+
+/// Directed, source-backed relationship in impact direction.
+model Edge {
+  id                 String             @id
+  fromNodeId         String
+  toNodeId           String
+  relation           EdgeRelation
+  dependencyStrength DependencyStrength
+  confidenceTier     ConfidenceTier
+  reviewStatus       ReviewStatus
+  evidenceId         String
+
+  fromNode Node           @relation("EdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   Node           @relation("EdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+  evidence EvidenceRecord @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@unique([fromNodeId, toNodeId, relation])
+  @@index([toNodeId])
+  @@index([reviewStatus])
+  @@index([evidenceId])
+}
+
+model Incident {
+  id              String         @id
+  scenarioKey     String?        @unique
+  status          IncidentStatus
+  severity        Severity
+  title           String
+  firstSeenAt     DateTime
+  updatedAt       DateTime
+  primaryVendorId String?
+  detectionRule   String
+  snapshotJson    String
+  evidenceId      String
+
+  primaryVendor   Vendor?          @relation(fields: [primaryVendorId], references: [id], onDelete: SetNull)
+  evidence        EvidenceRecord   @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  simulations     Simulation[]
+  actionProposals ActionProposal[]
+
+  @@index([status, severity])
+  @@index([primaryVendorId])
+  @@index([evidenceId])
+}
+
+/// Counterfactual; never a real payment action. No update/delete helpers;
+/// removed only by the incident cascade during demo reset.
+model Simulation {
+  id         String   @id
+  incidentId String
+  patchJson  String
+  beforeJson String
+  afterJson  String
+  createdAt  DateTime
+  createdBy  String
+  isDemo     Boolean
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+}
+
+model ActionProposal {
+  id          String              @id
+  incidentId  String
+  kind        SimulationPatchKind
+  payloadJson String
+  state       ActionProposalState
+  approver    String?
+  simulated   Boolean
+  createdAt   DateTime
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+  @@index([state])
+}
+
+/// Append-only operational log via repositories (no update/delete helpers). subjectId is polymorphic (no FK).
+model AuditEvent {
+  id          String   @id
+  actor       String
+  action      String
+  subjectId   String
+  detailsJson String
+  at          DateTime
+
+  @@index([subjectId, at])
+  @@index([at])
+}
