@@ -430,7 +430,7 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 
 ## Phase A — Foundation and truthful data
 
-### [ ] FS-00 — Initialize the runnable repository
+### [x] FS-00 — Initialize the runnable repository
 **Depends on:** nothing.  
 **Build:** Create Next.js TypeScript App Router app with Tailwind, ESLint, pnpm. Add `typecheck`, `test`, `test:e2e`, `db:seed`, `demo:reset`, `check:provenance` script slots. Install shadcn/ui, Lucide, Prisma SQLite, Zod, React Flow, Recharts, Vitest, Playwright. Add `.env.example` (`DATABASE_URL=file:./dev.db`, `DEMO_MODE=true`, `DEMO_NOW=2026-11-17T16:00:00Z`, optional Ramp vars, optional `LLM_API_KEY`). Add README setup and `docs/PROGRESS.md` starter.  
 **Files:** `package.json`, config files, `.env.example`, `README.md`, `docs/PROGRESS.md`.  
