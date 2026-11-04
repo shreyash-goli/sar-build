@@ -15,6 +15,18 @@ function topBarChip(page: Page) {
   return page.getByRole("banner").getByTestId("mode-chip");
 }
 
+function freshness(page: Page, placement: "topbar" | "mobile" | "drawer") {
+  return page.locator(
+    `[data-testid="source-freshness"][data-placement="${placement}"]`,
+  );
+}
+
+function demoClock(page: Page, placement: "topbar" | "mobile" | "drawer") {
+  return page.locator(
+    `[data-testid="demo-clock"][data-placement="${placement}"]`,
+  );
+}
+
 test.describe("app shell", () => {
   test("root redirects to the Overview", async ({ page }) => {
     await page.goto("/");
@@ -41,12 +53,15 @@ test.describe("app shell", () => {
       await expect(chip).toContainText("DEMO DATA");
       await expect(chip).not.toContainText("RAMP SANDBOX");
 
-      await expect(page.getByTestId("source-freshness").first()).toHaveText(
-        "No data loaded",
-      );
-      await expect(page.getByTestId("demo-clock").first()).toContainText(
+      await expect(chip).toHaveAttribute("data-mode", "DEMO");
+      await expect(freshness(page, "topbar")).toBeVisible();
+      await expect(freshness(page, "topbar")).toHaveText("No data loaded");
+      await expect(demoClock(page, "topbar")).toBeVisible();
+      await expect(demoClock(page, "topbar")).toHaveText(
         "Demo clock: 17 Nov 2026, 16:00 UTC",
       );
+      // The compact strip is for narrow viewports only.
+      await expect(page.getByTestId("mobile-status")).toBeHidden();
 
       await expect(
         page.getByText(
@@ -144,24 +159,47 @@ test.describe("app shell", () => {
   });
 });
 
-test.describe("narrow viewport (390px)", () => {
+for (const width of [390, 320]) {
+  test.describe(`narrow viewport (${width}px)`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    for (const route of ROUTES) {
+      test(`${route.path} fits and keeps freshness visible`, async ({
+        page,
+      }) => {
+        await page.goto(route.path);
+        await expect(
+          page.getByRole("heading", { level: 1, name: route.heading }),
+        ).toBeVisible();
+        await expect(topBarChip(page)).toBeVisible();
+        await expect(topBarChip(page)).toContainText("DEMO DATA");
+        await expect(page.locator("#app-sidebar")).toBeHidden();
+
+        // Desktop status is hidden; the compact strip replaces it.
+        await expect(freshness(page, "topbar")).toBeHidden();
+        await expect(freshness(page, "mobile")).toBeVisible();
+        await expect(freshness(page, "mobile")).toHaveText("No data loaded");
+        await expect(demoClock(page, "mobile")).toBeVisible();
+        await expect(demoClock(page, "mobile")).toHaveText(
+          "Demo clock: 17 Nov 2026, 16:00 UTC",
+        );
+
+        // Strip stays inside the viewport and under the top bar.
+        const strip = (await page.getByTestId("mobile-status").boundingBox())!;
+        expect(strip.x).toBeGreaterThanOrEqual(0);
+        expect(strip.x + strip.width).toBeLessThanOrEqual(width);
+
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+        expect(overflow).toBeLessThanOrEqual(0);
+      });
+    }
+  });
+}
+
+test.describe("narrow viewport (390px) drawer", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-
-  for (const route of ROUTES) {
-    test(`${route.path} fits without horizontal overflow`, async ({ page }) => {
-      await page.goto(route.path);
-      await expect(
-        page.getByRole("heading", { level: 1, name: route.heading }),
-      ).toBeVisible();
-      await expect(topBarChip(page)).toBeVisible();
-      await expect(page.locator("#app-sidebar")).toBeHidden();
-
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - window.innerWidth,
-      );
-      expect(overflow).toBeLessThanOrEqual(0);
-    });
-  }
 
   test("mobile navigation drawer opens, traps Escape, and navigates", async ({
     page,
@@ -178,6 +216,7 @@ test.describe("narrow viewport (390px)", () => {
     await expect(
       dialog.getByRole("button", { name: "Close navigation" }),
     ).toBeFocused();
+    await expect(freshness(page, "drawer")).toHaveText("No data loaded");
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();

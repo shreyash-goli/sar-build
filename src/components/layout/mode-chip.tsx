@@ -1,31 +1,19 @@
 import { CircleDashed, FlaskConical } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { SourceModeKind } from "./shell-status";
+import { getModeChipCopy } from "./mode-copy";
+import type { ShellMode } from "./shell-status";
 
-const MODE_COPY: Record<
-  SourceModeKind,
-  { label: string; description: string }
-> = {
-  demo: {
-    label: "DEMO DATA",
-    description:
-      "Demo data mode: all records are fictional fixtures, not live financial data.",
-  },
-  none: {
-    label: "NO SOURCE CONNECTED",
-    description: "No data source is connected.",
-  },
-};
+export { getModeChipCopy, type ModeChipCopy } from "./mode-copy";
 
-export function ModeChip({ mode }: { mode: SourceModeKind }) {
-  const copy = MODE_COPY[mode];
-  const Icon = mode === "demo" ? FlaskConical : CircleDashed;
+export function ModeChip({ mode }: { mode: ShellMode }) {
+  const copy = getModeChipCopy(mode);
+  const Icon = mode === null ? CircleDashed : FlaskConical;
   return (
     <Badge
       data-testid="mode-chip"
-      data-mode={mode}
-      variant={mode === "demo" ? "warning" : "neutral"}
+      data-mode={mode ?? "NONE"}
+      variant={copy.variant}
       title={copy.description}
     >
       <Icon aria-hidden="true" />
@@ -33,8 +21,4 @@ export function ModeChip({ mode }: { mode: SourceModeKind }) {
       {copy.label}
     </Badge>
   );
-}
-
-export function modeDescription(mode: SourceModeKind): string {
-  return MODE_COPY[mode].description;
 }

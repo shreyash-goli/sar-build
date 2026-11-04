@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Brand } from "./brand";
 import { ModeChip } from "./mode-chip";
-import type { SourceModeKind } from "./shell-status";
+import type { DemoClock, ShellMode } from "./shell-status";
 import { SidebarNav } from "./sidebar-nav";
 
 export type AppShellProps = {
-  mode: SourceModeKind;
-  /** Injected demo clock, or null when not in demo mode. */
-  demoClock: { iso: string; label: string } | null;
+  mode: ShellMode;
+  /** Injected demo clock (valid or explicitly invalid), or null when unset. */
+  demoClock: DemoClock | null;
   /** Pre-formatted last-load label, or null when nothing has been loaded. */
   freshnessLabel: string | null;
   children: React.ReactNode;
@@ -178,6 +178,7 @@ export function AppShell({
               <StatusLines
                 demoClock={demoClock}
                 freshnessLabel={freshnessLabel}
+                placement="drawer"
               />
               <p className="leading-relaxed">
                 Prototype. Not an official Ramp product.
@@ -188,29 +189,45 @@ export function AppShell({
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
-          <Button
-            ref={menuButtonRef}
-            variant="ghost"
-            size="icon-sm"
-            className="-ml-1.5 md:hidden"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open navigation"
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-nav"
-          >
-            <Menu aria-hidden="true" />
-          </Button>
-          <Brand className="md:hidden" />
-          <div className="ml-auto flex min-w-0 items-center gap-4">
-            <div className="hidden items-center gap-4 text-xs text-subtle sm:flex">
-              <StatusLines
-                demoClock={demoClock}
-                freshnessLabel={freshnessLabel}
-                inline
-              />
+        <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+          <div className="flex h-[var(--topbar-height)] items-center gap-3 px-4 sm:px-6">
+            <Button
+              ref={menuButtonRef}
+              variant="ghost"
+              size="icon-sm"
+              className="-ml-1.5 md:hidden"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav"
+            >
+              <Menu aria-hidden="true" />
+            </Button>
+            <Brand
+              className="md:hidden"
+              wordmarkClassName="max-[400px]:sr-only"
+            />
+            <div className="ml-auto flex min-w-0 items-center gap-4">
+              <div className="hidden items-center gap-4 text-xs text-subtle sm:flex">
+                <StatusLines
+                  demoClock={demoClock}
+                  freshnessLabel={freshnessLabel}
+                  placement="topbar"
+                />
+              </div>
+              <ModeChip mode={mode} />
             </div>
-            <ModeChip mode={mode} />
+          </div>
+          {/* Compact status strip: keeps freshness visible below 640px. */}
+          <div
+            data-testid="mobile-status"
+            className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/60 px-4 py-1.5 text-[0.6875rem] leading-4 text-subtle sm:hidden"
+          >
+            <StatusLines
+              demoClock={demoClock}
+              freshnessLabel={freshnessLabel}
+              placement="mobile"
+            />
           </div>
         </header>
 
@@ -228,32 +245,20 @@ export function AppShell({
   );
 }
 
+type StatusPlacement = "topbar" | "mobile" | "drawer";
+
 function StatusLines({
   demoClock,
   freshnessLabel,
-  inline = false,
+  placement,
 }: {
-  demoClock: { iso: string; label: string } | null;
+  demoClock: DemoClock | null;
   freshnessLabel: string | null;
-  inline?: boolean;
+  placement: StatusPlacement;
 }) {
   return (
     <>
-      {demoClock ? (
-        <span className="flex items-center gap-1.5" data-testid="demo-clock">
-          <Clock aria-hidden="true" className="size-3.5" />
-          <span>
-            Demo clock:{" "}
-            <time dateTime={demoClock.iso} className="font-mono text-muted">
-              {demoClock.label}
-            </time>
-          </span>
-        </span>
-      ) : null}
-      {inline && demoClock ? (
-        <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
-      ) : null}
-      <span data-testid="source-freshness">
+      <span data-testid="source-freshness" data-placement={placement}>
         {freshnessLabel ? (
           <>
             Last loaded:{" "}
@@ -263,6 +268,34 @@ function StatusLines({
           "No data loaded"
         )}
       </span>
+      {placement !== "drawer" && demoClock ? (
+        <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
+      ) : null}
+      {demoClock ? (
+        <span
+          className={cn(
+            "flex items-center gap-1.5",
+            demoClock.status === "invalid" && "text-warning",
+          )}
+          data-testid="demo-clock"
+          data-placement={placement}
+          data-status={demoClock.status}
+        >
+          <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+          {demoClock.status === "valid" ? (
+            <span>
+              Demo clock:{" "}
+              <time dateTime={demoClock.iso} className="font-mono text-muted">
+                {demoClock.label}
+              </time>
+            </span>
+          ) : (
+            <span title="DEMO_NOW is set but is not a valid ISO 8601 timestamp.">
+              Demo clock invalid
+            </span>
+          )}
+        </span>
+      ) : null}
     </>
   );
 }

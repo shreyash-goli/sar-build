@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 export function Brand({
   compact = false,
   className,
+  wordmarkClassName,
 }: {
   compact?: boolean;
   className?: string;
+  wordmarkClassName?: string;
 }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
@@ -19,6 +21,7 @@ export function Brand({
         className={cn(
           "text-[0.9375rem] font-semibold tracking-tight text-foreground",
           compact && "sr-only",
+          wordmarkClassName,
         )}
       >
         FailSafe

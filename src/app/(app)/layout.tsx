@@ -17,11 +17,7 @@ export default async function AppLayout({
     <ToastProvider>
       <AppShell
         mode={status.mode}
-        demoClock={
-          status.demoClock
-            ? { iso: status.demoClock, label: formatUtc(status.demoClock) }
-            : null
-        }
+        demoClock={status.demoClock}
         freshnessLabel={
           status.lastLoadedAt ? formatUtc(status.lastLoadedAt) : null
         }

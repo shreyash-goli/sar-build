@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Database } from "lucide-react";
 
-import { ModeChip, modeDescription } from "@/components/layout/mode-chip";
+import { getModeChipCopy, ModeChip } from "@/components/layout/mode-chip";
 import { formatUtc, readShellStatus } from "@/components/layout/shell-status";
 import {
   Card,
@@ -50,7 +50,7 @@ export default async function Page() {
               <dt className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">
                 Meaning
               </dt>
-              <dd className="text-muted">{modeDescription(status.mode)}</dd>
+              <dd className="text-muted">{getModeChipCopy(status.mode).description}</dd>
             </div>
             <div className="flex flex-col gap-1.5">
               <dt className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">

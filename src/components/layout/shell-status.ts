@@ -1,22 +1,32 @@
 /**
  * Server-side shell status derived from environment variables.
  *
- * FS-01 scope: the only modes that can be truthfully claimed without a source
- * adapter are "demo" (DEMO_MODE=true) and "none". A Ramp sandbox mode is
- * deliberately NOT representable here until a real read-only adapter exists.
+ * Labels and tones come from the shared provenance contract
+ * (`@/lib/provenance`); this module only decides *which* mode applies.
  *
- * Call only from Server Components after `await connection()` so the values
- * are read at request time rather than frozen at build time.
+ * Until a real read-only adapter exists, the only truthful states are the
+ * DEMO workspace (DEMO_MODE=true) or no source at all (`null`). This module
+ * deliberately never yields RAMP_SANDBOX or RAMP_LIVE_READONLY.
+ *
+ * Call only from Server Components after `await connection()` so values are
+ * read at request time rather than frozen at build time.
  */
-export type SourceModeKind = "demo" | "none";
+import type { WorkspaceMode } from "@/lib/schema/enums";
+
+/** Workspace mode, or `null` when no data source is connected. */
+export type ShellMode = Extract<WorkspaceMode, "DEMO"> | null;
+
+export type DemoClock =
+  | { status: "valid"; iso: string; label: string }
+  | { status: "invalid" };
 
 export type ShellStatus = {
-  mode: SourceModeKind;
-  /** Injected demo clock (ISO 8601) when in demo mode and DEMO_NOW is valid. */
-  demoClock: string | null;
+  mode: ShellMode;
+  /** Injected demo clock. `null` when not in demo mode or DEMO_NOW unset. */
+  demoClock: DemoClock | null;
   /**
    * ISO timestamp of the last successful data load, or null when nothing has
-   * been loaded. Always null in FS-01: no data layer exists yet.
+   * been loaded. Always null until a data layer is wired into the shell.
    */
   lastLoadedAt: string | null;
 };
@@ -24,13 +34,20 @@ export type ShellStatus = {
 export function readShellStatus(
   env: Record<string, string | undefined> = process.env,
 ): ShellStatus {
-  const mode: SourceModeKind =
-    env.DEMO_MODE?.trim().toLowerCase() === "true" ? "demo" : "none";
+  const mode: ShellMode =
+    env.DEMO_MODE?.trim().toLowerCase() === "true" ? "DEMO" : null;
 
-  let demoClock: string | null = null;
-  if (mode === "demo" && env.DEMO_NOW) {
-    const parsed = new Date(env.DEMO_NOW);
-    if (!Number.isNaN(parsed.getTime())) demoClock = parsed.toISOString();
+  let demoClock: DemoClock | null = null;
+  const rawNow = env.DEMO_NOW?.trim();
+  if (mode === "DEMO" && rawNow) {
+    const parsed = new Date(rawNow);
+    demoClock = Number.isNaN(parsed.getTime())
+      ? { status: "invalid" }
+      : {
+          status: "valid",
+          iso: parsed.toISOString(),
+          label: formatUtc(parsed.toISOString()),
+        };
   }
 
   return { mode, demoClock, lastLoadedAt: null };
