@@ -15,7 +15,7 @@ const E2E_DATABASE_URL = `file:./e2e-${PORT}.db`;
 // imports, demo reset) run strictly after every read-only spec, so they can
 // never shift counts that other specs assert. Add future state-mutating
 // specs here. Simulation / action specs only append rows no other spec reads.
-const MUTATING = /(graph-review|hero)\.spec\.ts/;
+const MUTATING = /(alerts|graph-review|hero)\.spec\.ts/;
 
 export default defineConfig({
   testDir: "./tests/e2e",

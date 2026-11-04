@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Brand } from "./brand";
 import { ModeChip } from "./mode-chip";
 import { ResetDemoButton } from "./reset-demo";
+import { AlertCenter } from "@/components/alerts/alert-center";
 import type { ShellFreshness } from "./shell-freshness";
 import type { DemoClock, ShellMode } from "./shell-status";
 import { SidebarNav } from "./sidebar-nav";
@@ -18,6 +19,8 @@ export type AppShellProps = {
   modeHint: string | null;
   /** Show the "Reset demo" control (DEMO_MODE on). The server still enforces it. */
   canResetDemo?: boolean;
+  /** Active in-app alert count, or null when alerts could not be read (bell hidden). */
+  alertActiveCount?: number | null;
   /** Injected demo clock (valid or explicitly invalid), or null when unset. */
   demoClock: DemoClock | null;
   /** Source freshness derived server-side from the database. */
@@ -32,6 +35,7 @@ export function AppShell({
   mode,
   modeHint,
   canResetDemo = false,
+  alertActiveCount = null,
   demoClock,
   freshness,
   children,
@@ -234,6 +238,7 @@ export function AppShell({
                   {modeHint}
                 </span>
               ) : null}
+              {alertActiveCount !== null ? <AlertCenter activeCount={alertActiveCount} /> : null}
               <ModeChip mode={mode} />
             </div>
           </div>
