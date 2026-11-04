@@ -9,6 +9,7 @@ import { createReadOnlyRepositories } from "@/lib/provenance/ledger";
 import { RepositoryError, type Repositories } from "@/lib/repositories";
 import { API_ERROR_HTTP_STATUS, type ApiErrorCode, type ApiMeta } from "@/lib/schema";
 import { WriteForbiddenError } from "@/lib/security/write-gate";
+import { logServerError } from "@/lib/security/redact";
 import { InvalidDemoClockError, getNowIso } from "@/lib/time";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -67,7 +68,7 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
       // Misconfiguration, not a server bug: say what to fix, never fall back to real time.
       return jsonError("NOT_CONFIGURED", "DEMO_NOW is not a valid ISO timestamp with timezone (e.g. 2026-11-17T16:00:00Z).");
     }
-    console.error("[api] unhandled error", e);
+    logServerError("api", e); // redacted summary only; the client gets a generic message
     return jsonError("INTERNAL_ERROR", "Internal error");
   }
 }

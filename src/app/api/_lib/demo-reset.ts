@@ -19,6 +19,7 @@ import { isDemoModeEnabled } from "@/lib/env";
 import { createReadOnlyRepositories } from "@/lib/provenance/ledger";
 import { WriteForbiddenError } from "@/lib/security/write-gate";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { assertSameOriginWrite } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 const LOOPBACK = ["localhost", "127.0.0.1", "::1"];
@@ -79,6 +80,7 @@ export function demoResetHandler(request: Request, ctx: { db: PrismaClient; env:
   return handle(async () => {
     if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError("Demo reset requires DEMO_MODE=true on the server");
     assertLocalRequest(request, ctx.env);
+    assertSameOriginWrite(request); // FS-21: Origin must match the Host incl. port (no other localhost app)
     const text = await request.text();
     if (text.trim() !== "" && text.trim() !== "{}") throw new ApiFailure("BAD_REQUEST", "Demo reset takes no request body");
 

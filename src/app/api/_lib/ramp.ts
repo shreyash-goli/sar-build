@@ -15,6 +15,7 @@ import { createRepositories, type Repositories } from "@/lib/repositories";
 import { assertRequestWritesAllowed } from "@/lib/security/write-gate";
 import { getNow } from "@/lib/time";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { assertSameOriginWrite } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 export type RampContext = { db: PrismaClient; env: Env; fetch?: typeof fetch; sleep?: (ms: number) => Promise<void> };
@@ -58,6 +59,7 @@ export function rampSyncHandler(request: Request, ctx: RampContext): Promise<Res
       throw new ApiFailure("NOT_CONFIGURED", cfg.reason, { reason: "RAMP_NOT_CONFIGURED", missing: cfg.missing });
     }
     assertRequestWritesAllowed(request, ctx.env);
+    assertSameOriginWrite(request);
     const read = createReadOnlyRepositories(ctx.db);
     const [workspace] = await read.workspaces.list();
     if (workspace?.mode !== "RAMP_SANDBOX") {

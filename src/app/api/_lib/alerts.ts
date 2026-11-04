@@ -10,6 +10,7 @@ import { IdSchema } from "@/lib/schema";
 import { WriteForbiddenError } from "@/lib/security/write-gate";
 import { getNow, resolveDemoClock } from "@/lib/time";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { readAuthorizedJsonBody } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 type Ctx = { db: PrismaClient; env: Env };
@@ -42,22 +43,15 @@ async function mutate<S extends z.ZodType, T>(
   schema: S,
   fn: (repos: Repositories, id: string, body: z.output<S>, now: Date) => Promise<T>,
 ): Promise<Response> {
-  if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError(DEMO_ONLY);
-  const alertId = IdSchema.safeParse(id);
-  if (!alertId.success) throw new ApiFailure("BAD_REQUEST", "Invalid alert id");
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    throw new ApiFailure("BAD_REQUEST", "Request body must be JSON");
-  }
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new ApiFailure("BAD_REQUEST", "Invalid request", issues(parsed.error.issues));
-  const now = getNow({ env: ctx.env });
   const gate = () => {
     if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError(DEMO_ONLY);
   };
-  const data = await ctx.db.$transaction((tx) => fn(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), alertId.data, parsed.data, now));
+  gate();
+  const alertId = IdSchema.safeParse(id);
+  if (!alertId.success) throw new ApiFailure("BAD_REQUEST", "Invalid alert id");
+  const body = await readAuthorizedJsonBody(request, schema, gate);
+  const now = getNow({ env: ctx.env });
+  const data = await ctx.db.$transaction((tx) => fn(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), alertId.data, body, now));
   return jsonData(data, await buildMeta({ repos: createReadOnlyRepositories(ctx.db), env: ctx.env }));
 }
 

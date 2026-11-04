@@ -14,33 +14,23 @@ import { buildSimulationList } from "@/lib/simulations/load";
 import { runSimulation } from "@/lib/simulations/run";
 import { getNow } from "@/lib/time";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { readAuthorizedJsonBody } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 export type ScenarioContext = { db: PrismaClient; env: Env };
 
-const issuesOf = (issues: readonly { path: PropertyKey[]; message: string }[]) =>
-  issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message }));
-
 export function runScenario(request: Request, { db, env }: ScenarioContext): Promise<Response> {
   return handle(async () => {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      throw new ApiFailure("BAD_REQUEST", "Request body must be JSON");
-    }
-    const parsed = ScenarioRunRequestSchema.safeParse(body);
-    if (!parsed.success) throw new ApiFailure("BAD_REQUEST", "Invalid simulation request", issuesOf(parsed.error.issues));
-    if (!isDemoModeEnabled(env)) throw new WriteForbiddenError("Simulations are available only in demo mode (DEMO_MODE=true)");
-    const now = getNow({ env });
     const demoGate = () => {
       if (!isDemoModeEnabled(env)) throw new WriteForbiddenError("Simulations are available only in demo mode (DEMO_MODE=true)");
     };
+    const body = await readAuthorizedJsonBody(request, ScenarioRunRequestSchema, demoGate, { invalidMessage: "Invalid simulation request" });
+    const now = getNow({ env });
     try {
       const data = await db.$transaction((tx) =>
         runSimulation(createRepositories(tx, { writeGate: demoGate, demoResetGate: demoGate }), {
-          incidentId: parsed.data.incidentId,
-          patch: parsed.data.patch,
+          incidentId: body.incidentId,
+          patch: body.patch,
           now,
         }),
       );

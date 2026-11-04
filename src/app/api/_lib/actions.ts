@@ -21,28 +21,18 @@ import { IdSchema } from "@/lib/schema";
 import { WriteForbiddenError } from "@/lib/security/write-gate";
 import { getNow } from "@/lib/time";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { readAuthorizedJsonBody } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 export type ActionsContext = { db: PrismaClient; env: Env };
 
 const DEMO_ONLY = "Response actions are available only in demo mode (DEMO_MODE=true)";
 
-async function readBody<S extends z.ZodType>(request: Request, schema: S): Promise<z.output<S>> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    throw new ApiFailure("BAD_REQUEST", "Request body must be JSON");
-  }
-  const r = schema.safeParse(body);
-  if (!r.success) {
-    throw new ApiFailure(
-      "BAD_REQUEST",
-      "Invalid request",
-      r.error.issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message })),
-    );
-  }
-  return r.data;
+/** Demo gate, then same-origin check, then the size-limited JSON body (FS-21). */
+async function readBody<S extends z.ZodType>(request: Request, schema: S, env: Env): Promise<z.output<S>> {
+  return readAuthorizedJsonBody(request, schema, () => {
+    if (!isDemoModeEnabled(env)) throw new WriteForbiddenError(DEMO_ONLY);
+  });
 }
 
 function parseId(id: string): string {
@@ -64,7 +54,7 @@ async function write<T>(ctx: ActionsContext, status: number, fn: (repos: Reposit
 
 export function proposeActionHandler(request: Request, ctx: ActionsContext): Promise<Response> {
   return handle(async () => {
-    const body = await readBody(request, ProposeActionRequestSchema);
+    const body = await readBody(request, ProposeActionRequestSchema, ctx.env);
     return write(ctx, 201, (repos, now) => proposeAction(repos, body, now));
   });
 }
@@ -72,7 +62,7 @@ export function proposeActionHandler(request: Request, ctx: ActionsContext): Pro
 export function submitActionHandler(request: Request, id: string, ctx: ActionsContext): Promise<Response> {
   return handle(async () => {
     const actionId = parseId(id);
-    const body = await readBody(request, SubmitActionRequestSchema);
+    const body = await readBody(request, SubmitActionRequestSchema, ctx.env);
     return write(ctx, 200, (repos, now) => submitAction(repos, actionId, body, now));
   });
 }
@@ -80,7 +70,7 @@ export function submitActionHandler(request: Request, id: string, ctx: ActionsCo
 export function approveActionHandler(request: Request, id: string, ctx: ActionsContext): Promise<Response> {
   return handle(async () => {
     const actionId = parseId(id);
-    const body = await readBody(request, ApproveActionRequestSchema);
+    const body = await readBody(request, ApproveActionRequestSchema, ctx.env);
     return write(ctx, 200, (repos, now) => approveAction(repos, actionId, body, now));
   });
 }
@@ -88,7 +78,7 @@ export function approveActionHandler(request: Request, id: string, ctx: ActionsC
 export function rejectActionHandler(request: Request, id: string, ctx: ActionsContext): Promise<Response> {
   return handle(async () => {
     const actionId = parseId(id);
-    const body = await readBody(request, RejectActionRequestSchema);
+    const body = await readBody(request, RejectActionRequestSchema, ctx.env);
     return write(ctx, 200, (repos, now) => rejectAction(repos, actionId, body, now));
   });
 }

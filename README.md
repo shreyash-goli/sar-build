@@ -72,7 +72,8 @@ pnpm build && pnpm start:local   # next start --hostname 127.0.0.1 → http://12
 | `pnpm ramp:init --confirm` | Optional: clear all data and create an empty read-only Ramp sandbox workspace (FS-18) |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test` | ESLint / `tsc` (after typegen) / Vitest unit + integration |
 | `pnpm test:e2e` | Playwright; builds and serves on `:3100` with its own `e2e-3100.db`. Run `pnpm exec playwright install chromium` once. |
-| `pnpm check:provenance` | Read-only audit: fails on dangling evidence, unjustified confirmed edges, unreadable incidents or assertions without inputs |
+| `pnpm check:provenance` | Read-only audit: fails on dangling evidence, unjustified confirmed edges, unreadable incidents or assertions without inputs (also runs before every e2e build) |
+| `pnpm verify` | CI-style gate: lint, typecheck, unit + integration tests (incl. the API smoke suite), then `check:provenance` |
 
 The seed and reset CLIs default `DEMO_MODE` to `true` only when it is unset; an explicit
 `DEMO_MODE=false` (or blank) refuses.
@@ -102,6 +103,10 @@ Prisma 7 + SQLite (libSQL adapter), Zod 4, Vitest, Playwright.
 - Risk is *potential* impact through confirmed dependencies, not a prediction that a vendor will
   suspend service.
 - Alerts are **in-app only**; nothing is sent by email, Slack or webhook.
+- Server hardening (FS-21): every write route is refused without `DEMO_MODE=true` (Ramp sync also
+  accepts `ADMIN_TOKEN`), refuses cross-origin browser requests, and reads at most 16 KiB of JSON
+  (manifest import: its own larger cap). Unexpected errors return a generic `500 Internal error`
+  without stack traces; server logs redact credentials, tokens and secret environment values.
 - **AI-assisted suggestions (FS-19) are optional and OFF by default.** With `LLM_API_KEY` and
   `LLM_MODEL` set (an OpenAI-style chat-completions endpoint via `LLM_BASE_URL`, tested with mocked
   responses only; the server must support JSON mode via `response_format`), a manifest import with
@@ -142,8 +147,8 @@ Prisma 7 + SQLite (libSQL adapter), Zod 4, Vitest, Playwright.
 - `POST /api/demo/reset` requires `DEMO_MODE=true` and a loopback (or `DEMO_RESET_ALLOWED_HOSTS`)
   Host plus same-origin headers. A route handler cannot see the caller's socket address, so a
   non-browser client on the same LAN could forge `Host: localhost`; present with
-  `pnpm start:local` (127.0.0.1) unless LAN access is intended. Any page on another localhost port
-  can also trigger a reset. There is no rate limit.
+  `pnpm start:local` (127.0.0.1) unless LAN access is intended. Browser requests from another
+  origin (including another localhost port) are refused. There is no rate limit.
 - Under the fixed demo clock, snoozed alerts do not expire on their own.
 - Funds with a `DAILY` interval are rarely scorable (no workspace timezone is modeled).
 - Unknown incident pages render the not-found UI with HTTP 200 (streamed route); the API returns 404.

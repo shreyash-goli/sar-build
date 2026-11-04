@@ -4,6 +4,7 @@
  * record, edge or incident is untraceable; exits 0 otherwise. Never modifies data.
  */
 import { createDbClient } from "@/lib/db";
+import { redactSecrets } from "@/lib/security/redact";
 import { checkProvenance, formatProvenanceReport } from "@/lib/provenance/check";
 
 async function main(): Promise<number> {
@@ -22,7 +23,7 @@ async function main(): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (e: unknown) => {
-    console.error(`check:provenance could not run: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`check:provenance could not run: ${redactSecrets(e instanceof Error ? e.message : String(e))}`);
     process.exit(2);
   },
 );

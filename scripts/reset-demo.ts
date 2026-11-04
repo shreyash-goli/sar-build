@@ -7,6 +7,7 @@
  * src/lib/demo/northstar.ts (resetNorthstarDemo) for reuse by POST /api/demo/reset.
  */
 import { createDbClient } from "@/lib/db";
+import { redactSecrets } from "@/lib/security/redact";
 import { applyCliDemoDefault } from "@/lib/demo/cli-env";
 import { resetNorthstarDemo } from "@/lib/demo/northstar";
 
@@ -22,6 +23,6 @@ async function main() {
 }
 
 main().catch((e: unknown) => {
-  console.error(`Demo reset failed: ${e instanceof Error ? e.message : String(e)}`);
+  console.error(`Demo reset failed: ${redactSecrets(e instanceof Error ? e.message : String(e))}`);
   process.exit(1);
 });

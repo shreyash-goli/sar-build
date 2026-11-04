@@ -14,6 +14,7 @@ import { createRepositories } from "@/lib/repositories";
 import { WriteForbiddenError } from "@/lib/security/write-gate";
 import { getNow } from "@/lib/time";
 import { ApiFailure, buildMeta, handle, jsonData } from "./http";
+import { readAuthorizedJsonBody } from "./request";
 
 type Env = Readonly<Record<string, string | undefined>>;
 const DEMO_ONLY = "Manifest import is available only in demo mode (DEMO_MODE=true)";
@@ -56,32 +57,18 @@ export type ImportContext = {
 export function importManifestHandler(request: Request, ctx: ImportContext): Promise<Response> {
   return handle(async () => {
     // Refuse before reading anything from the body.
-    if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError(DEMO_ONLY);
-    const declared = Number(request.headers.get("content-length") ?? "0");
-    if (declared > MAX_IMPORT_REQUEST_BYTES) {
-      throw new ApiFailure("BAD_REQUEST", "Request is too large", { reason: "MANIFEST_TOO_LARGE", limitBytes: MAX_IMPORT_REQUEST_BYTES });
-    }
-    const text = await request.text();
-    if (new TextEncoder().encode(text).length > MAX_IMPORT_REQUEST_BYTES) {
-      throw new ApiFailure("BAD_REQUEST", "Request is too large", { reason: "MANIFEST_TOO_LARGE", limitBytes: MAX_IMPORT_REQUEST_BYTES });
-    }
-    let body: unknown;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      throw new ApiFailure("BAD_REQUEST", "Request body must be JSON");
-    }
-    const parsed = ManifestImportRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ApiFailure("BAD_REQUEST", "Invalid import", parsed.error.issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message })));
-    }
-    const now = getNow({ env: ctx.env });
-    const ai = parsed.data.suggester === "ai" ? await aiPlanFor(ctx, parsed.data) : undefined;
     const gate = () => {
       if (!isDemoModeEnabled(ctx.env)) throw new WriteForbiddenError(DEMO_ONLY);
     };
+    const body = await readAuthorizedJsonBody(request, ManifestImportRequestSchema, gate, {
+      maxBytes: MAX_IMPORT_REQUEST_BYTES,
+      reason: "MANIFEST_TOO_LARGE",
+      invalidMessage: "Invalid import",
+    });
+    const now = getNow({ env: ctx.env });
+    const ai = body.suggester === "ai" ? await aiPlanFor(ctx, body) : undefined;
     const data = await ctx.db.$transaction(
-      (tx) => importManifests(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), parsed.data, now, { ai }),
+      (tx) => importManifests(createRepositories(tx, { writeGate: gate, demoResetGate: gate }), body, now, { ai }),
       { timeout: 30_000, maxWait: 30_000 },
     );
     return jsonData(data, await buildMeta({ repos: createReadOnlyRepositories(ctx.db), env: ctx.env }), 201);

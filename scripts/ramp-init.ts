@@ -4,6 +4,7 @@
  * Destructive (same scope as demo:reset); requires --confirm. `pnpm demo:reset` restores the demo.
  */
 import { createDbClient } from "@/lib/db";
+import { redactSecrets } from "@/lib/security/redact";
 import { createRepositories } from "@/lib/repositories";
 
 export const RAMP_WORKSPACE = { id: "ws-ramp-sandbox", name: "Ramp sandbox (read-only)", mode: "RAMP_SANDBOX" } as const;
@@ -32,7 +33,7 @@ async function main(): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (e: unknown) => {
-    console.error(`ramp:init failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`ramp:init failed: ${redactSecrets(e instanceof Error ? e.message : String(e))}`);
     process.exit(2);
   },
 );

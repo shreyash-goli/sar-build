@@ -8,7 +8,8 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 // command itself and always completes before `next start` opens the file.
 // `db:deploy` applies migrations (creating the file if missing) and
 // `demo:reset` transactionally restores the fictional Northstar fixture, so
-// every run starts from the same state.
+// every run starts from the same state. `check:provenance` (FS-21) then fails
+// the run before the build if any record, edge or incident is untraceable.
 const E2E_DATABASE_URL = `file:./e2e-${PORT}.db`;
 
 // Specs that change shared graph / incident state (edge reviews, manifest
@@ -39,7 +40,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm db:deploy && pnpm demo:reset && pnpm build && pnpm start --port ${PORT}`,
+    command: `pnpm db:deploy && pnpm demo:reset && pnpm check:provenance && pnpm build && pnpm start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     // Never reuse a stray server: it could be pointed at dev.db or stale data.
     reuseExistingServer: false,
