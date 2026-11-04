@@ -1,0 +1,268 @@
+"use client";
+
+import * as React from "react";
+import { Clock, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Brand } from "./brand";
+import { ModeChip } from "./mode-chip";
+import type { SourceModeKind } from "./shell-status";
+import { SidebarNav } from "./sidebar-nav";
+
+export type AppShellProps = {
+  mode: SourceModeKind;
+  /** Injected demo clock, or null when not in demo mode. */
+  demoClock: { iso: string; label: string } | null;
+  /** Pre-formatted last-load label, or null when nothing has been loaded. */
+  freshnessLabel: string | null;
+  children: React.ReactNode;
+};
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export function AppShell({
+  mode,
+  demoClock,
+  freshnessLabel,
+  children,
+}: AppShellProps) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const menuButtonRef = React.useRef<HTMLButtonElement>(null);
+  const drawerRef = React.useRef<HTMLDivElement>(null);
+
+  const closeMobile = React.useCallback(() => {
+    setMobileOpen(false);
+    menuButtonRef.current?.focus();
+  }, []);
+
+  // Drawer: move focus in, lock background scroll, trap Tab, close on Escape.
+  React.useEffect(() => {
+    if (!mobileOpen) return;
+    const drawer = drawerRef.current;
+    drawer?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMobile();
+        return;
+      }
+      if (event.key !== "Tab" || !drawer) return;
+      const items = Array.from(drawer.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    // Close if the viewport grows past the mobile breakpoint.
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onBreakpoint = (e: MediaQueryListEvent) => {
+      if (e.matches) setMobileOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    mq.addEventListener("change", onBreakpoint);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      mq.removeEventListener("change", onBreakpoint);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen, closeMobile]);
+
+  return (
+    <div className="flex min-h-dvh w-full">
+      <a
+        href="#main-content"
+        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-lg transition-transform focus-visible:translate-y-0"
+      >
+        Skip to content
+      </a>
+
+      {/* Desktop sidebar */}
+      <div
+        id="app-sidebar"
+        data-collapsed={collapsed || undefined}
+        className={cn(
+          "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface/80 transition-[width] duration-200 md:flex",
+          collapsed
+            ? "w-[var(--sidebar-width-collapsed)]"
+            : "w-[var(--sidebar-width)]",
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-[var(--topbar-height)] items-center border-b border-border",
+            collapsed ? "justify-center px-2" : "px-4",
+          )}
+        >
+          <Brand compact={collapsed} />
+        </div>
+        <nav aria-label="Main" className="flex-1 overflow-y-auto p-3">
+          <SidebarNav collapsed={collapsed} />
+        </nav>
+        <div
+          className={cn(
+            "flex flex-col gap-3 border-t border-border p-3",
+            collapsed && "items-center",
+          )}
+        >
+          {!collapsed ? (
+            <p className="px-1 text-xs leading-relaxed text-subtle">
+              Prototype. Not an official Ramp product.
+            </p>
+          ) : null}
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon-sm" : "sm"}
+            onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+            aria-controls="app-sidebar"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={cn(!collapsed && "justify-start")}
+          >
+            {collapsed ? (
+              <PanelLeftOpen aria-hidden="true" />
+            ) : (
+              <>
+                <PanelLeftClose aria-hidden="true" />
+                <span>Collapse</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile drawer */}
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            aria-hidden="true"
+            onClick={closeMobile}
+            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+          />
+          <div
+            ref={drawerRef}
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="absolute inset-y-0 left-0 flex w-[min(18rem,85vw)] flex-col border-r border-border-strong bg-surface shadow-2xl"
+          >
+            <div className="flex h-[var(--topbar-height)] items-center justify-between border-b border-border px-4">
+              <Brand />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={closeMobile}
+                aria-label="Close navigation"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </div>
+            <nav aria-label="Main" className="flex-1 overflow-y-auto p-3">
+              <SidebarNav onNavigate={() => setMobileOpen(false)} />
+            </nav>
+            <div className="flex flex-col gap-2 border-t border-border p-4 text-xs text-subtle">
+              <StatusLines
+                demoClock={demoClock}
+                freshnessLabel={freshnessLabel}
+              />
+              <p className="leading-relaxed">
+                Prototype. Not an official Ramp product.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex h-[var(--topbar-height)] items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
+          <Button
+            ref={menuButtonRef}
+            variant="ghost"
+            size="icon-sm"
+            className="-ml-1.5 md:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+          >
+            <Menu aria-hidden="true" />
+          </Button>
+          <Brand className="md:hidden" />
+          <div className="ml-auto flex min-w-0 items-center gap-4">
+            <div className="hidden items-center gap-4 text-xs text-subtle sm:flex">
+              <StatusLines
+                demoClock={demoClock}
+                freshnessLabel={freshnessLabel}
+                inline
+              />
+            </div>
+            <ModeChip mode={mode} />
+          </div>
+        </header>
+
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 outline-none focus-visible:outline-none"
+        >
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatusLines({
+  demoClock,
+  freshnessLabel,
+  inline = false,
+}: {
+  demoClock: { iso: string; label: string } | null;
+  freshnessLabel: string | null;
+  inline?: boolean;
+}) {
+  return (
+    <>
+      {demoClock ? (
+        <span className="flex items-center gap-1.5" data-testid="demo-clock">
+          <Clock aria-hidden="true" className="size-3.5" />
+          <span>
+            Demo clock:{" "}
+            <time dateTime={demoClock.iso} className="font-mono text-muted">
+              {demoClock.label}
+            </time>
+          </span>
+        </span>
+      ) : null}
+      {inline && demoClock ? (
+        <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
+      ) : null}
+      <span data-testid="source-freshness">
+        {freshnessLabel ? (
+          <>
+            Last loaded:{" "}
+            <span className="font-mono text-muted">{freshnessLabel}</span>
+          </>
+        ) : (
+          "No data loaded"
+        )}
+      </span>
+    </>
+  );
+}

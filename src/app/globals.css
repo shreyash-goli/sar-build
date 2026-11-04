@@ -1,20 +1,128 @@
 @import "tailwindcss";
 
+/*
+ * FailSafe design tokens.
+ * Dark navy/charcoal command-center palette with restrained lime (primary)
+ * and cyan (informational) accents. All text/background pairings below are
+ * chosen to meet WCAG 2.1 AA (>= 4.5:1 for body text) on --background and
+ * --surface.
+ */
 :root {
-  --background: #0b1220;
-  --foreground: #e6edf7;
+  color-scheme: dark;
+
+  --background: #090e18;
+  --surface: #0e1524;
+  --surface-raised: #131c2f;
+  --surface-hover: #18233a;
+  --border: #1f2b42;
+  --border-strong: #2c3b58;
+
+  --foreground: #e6edf7; /* ~16:1 on background */
+  --muted: #9aa8bd; /* ~7.9:1 on background */
+  --subtle: #7f8ca3; /* ~5.6:1 on background */
+
+  --accent: #b6ef5b; /* lime, primary action / active */
+  --accent-foreground: #0a1206;
+  --accent-soft: rgb(182 239 91 / 0.1);
+
+  --info: #5fd4ee; /* cyan, informational */
+  --info-soft: rgb(95 212 238 / 0.1);
+
+  --warning: #f5c04e;
+  --warning-soft: rgb(245 192 78 / 0.1);
+
+  --danger: #f87878;
+  --danger-soft: rgb(248 120 120 / 0.1);
+
+  --success: #5ee08f;
+  --success-soft: rgb(94 224 143 / 0.1);
+
+  --ring: #5fd4ee;
+
+  --radius: 0.625rem;
+  --sidebar-width: 15rem;
+  --sidebar-width-collapsed: 4.25rem;
+  --topbar-height: 3.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    background: var(--background);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgb(95 212 238 / 0.3);
+    color: var(--foreground);
+  }
+
+  /* Visible, consistent keyboard focus ring for every focusable element. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Subtle command-center grid behind the main canvas. Decorative only. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
