@@ -16,6 +16,7 @@
 import { isDemoModeEnabled } from "@/lib/env";
 import type { WorkspaceMode } from "@/lib/schema/enums";
 import { resolveDemoClock } from "@/lib/time";
+import { formatUtc } from "./format-utc";
 
 /** Workspace mode shown by the chip, or `null` when no data source is connected. */
 export type ShellMode = WorkspaceMode | null;
@@ -92,22 +93,4 @@ export function resolveChipMode(status: ShellStatus, source: WorkspaceSource): C
   const hint =
     source.workspaceMode === "DEMO" && !status.demoModeEnabled ? "Demo mode off · read-only" : null;
   return { mode: source.workspaceMode, hint, basis: "workspace" };
-}
-
-/** Formats an ISO timestamp as "17 Nov 2026, 16:00 UTC" deterministically. */
-export function formatUtc(iso: string): string {
-  const d = new Date(iso);
-  const date = new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(d);
-  const time = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  }).format(d);
-  return `${date}, ${time} UTC`;
 }

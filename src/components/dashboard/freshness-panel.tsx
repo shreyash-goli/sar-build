@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { DashboardData } from "@/lib/dashboard/schema";
 import { SOURCE_CLASS_DISPLAY } from "@/lib/provenance";
 import type { SourceClass } from "@/lib/schema/enums";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 
 export function FreshnessPanel({
   freshness,

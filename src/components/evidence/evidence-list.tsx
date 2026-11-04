@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import type { EvidenceLedgerEntry, SourcesListQuery } from "@/lib/provenance";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ClassificationBadge, SimulationBadge, VerificationBadge } from "./badges";

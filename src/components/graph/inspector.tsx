@@ -10,7 +10,7 @@ import { EdgeReviewDataSchema } from "@/lib/graph/review-schema";
 import { REVIEW_STATUS_DISPLAY } from "@/lib/provenance";
 import type { EvidenceMethod } from "@/lib/schema/enums";
 import type { GraphEdge, GraphNode } from "@/lib/schema";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PROVENANCE_TONE_VARIANT } from "@/components/ui/provenance-tone";

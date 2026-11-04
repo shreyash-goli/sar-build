@@ -6,7 +6,7 @@ import {
   type EvidenceLedgerEntry,
   type SourcesListQuery,
 } from "@/lib/provenance";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

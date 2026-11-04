@@ -1,5 +1,5 @@
 import type { ActionHistoryEntry } from "@/lib/actions/schema";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { HISTORY_ACTION_LABEL } from "./action-labels";
 
 /** Immutable audit trail for one action, rendered in server order (do not re-sort: the demo clock ties). */

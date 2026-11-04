@@ -6,7 +6,7 @@ import { Bot, Plug, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { AiStatusSchema, type AiStatus } from "@/lib/providers/llm/status-schema";
 import { RAMP_LABEL, RampStatusSchema, RampSyncResultSchema, type RampStatus } from "@/lib/providers/ramp/schema";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

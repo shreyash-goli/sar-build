@@ -75,10 +75,17 @@ export default async function Page({
           description={
             <>
               <p>The evidence ledger is empty, so there are no sources to inspect.</p>
-              <p className="mt-1 text-subtle">
-                Load the fictional demo workspace with{" "}
-                <code className="font-mono text-muted">pnpm db:seed</code>.
-              </p>
+              {chip.mode === "RAMP_SANDBOX" ? (
+                <p className="mt-1 text-subtle" data-testid="ledger-empty-hint" data-mode="RAMP_SANDBOX">
+                  No Ramp data yet: run a read-only sync from the Integrations panel (or{" "}
+                  <code className="font-mono text-muted">pnpm demo:reset</code> to return to the demo).
+                </p>
+              ) : (
+                <p className="mt-1 text-subtle" data-testid="ledger-empty-hint" data-mode={chip.mode ?? "NONE"}>
+                  Load the fictional demo workspace with{" "}
+                  <code className="font-mono text-muted">pnpm db:seed</code>.
+                </p>
+              )}
             </>
           }
         />

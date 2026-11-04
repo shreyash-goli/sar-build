@@ -6,7 +6,7 @@ import { Ban, CheckCheck, FilePlus2, Send } from "lucide-react";
 
 import { SIMULATION_ONLY_NOTICE, type ActionProposalView, type ActionResponseData } from "@/lib/actions/schema";
 import type { SimulationRecordView } from "@/lib/simulations/schema";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";

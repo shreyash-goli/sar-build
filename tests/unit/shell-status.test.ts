@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getModeChipCopy } from "@/components/layout/mode-copy";
 import { isDemoModeEnabled } from "@/lib/env";
-import { formatUtc, readShellStatus, resolveChipMode } from "@/components/layout/shell-status";
+import { readShellStatus, resolveChipMode } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { DEFAULT_DEMO_NOW, resolveDemoClock } from "@/lib/time";
 
 // readShellStatus() defaults to process.env; each test stubs the variables it

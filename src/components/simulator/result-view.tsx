@@ -4,7 +4,7 @@ import { ArrowRight, FlaskConical, Network } from "lucide-react";
 import type { FindingSummary, SimulationRecordView } from "@/lib/simulations/schema";
 import type { SimulationPatch } from "@/lib/schema/simulation";
 import { formatCents } from "@/lib/schema/money";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABEL, SEVERITY_LABEL, SEVERITY_VARIANT, dueLabel } from "@/components/dashboard/format";
 import { cn } from "@/lib/utils";

@@ -10,7 +10,9 @@
  * Call only from Server Components after `await connection()`.
  */
 import type { WorkspaceMode } from "@/lib/schema/enums";
-import { formatUtc, type WorkspaceSource } from "./shell-status";
+import { type WorkspaceSource } from "./shell-status";
+import { logServerError } from "@/lib/security/redact";
+import { formatUtc } from "./format-utc";
 
 export type ShellFreshness =
   | { status: "none" }
@@ -108,7 +110,7 @@ export async function readShellSource(load: FreshnessLoader = loadFromDb): Promi
       workspace: { status: "available", workspaceMode: deriveWorkspaceMode(inputs.workspaces) },
     };
   } catch (error) {
-    console.error("[shell] source status unavailable", error);
+    logServerError("shell", error);
     return { freshness: UNAVAILABLE, workspace: { status: "unavailable" } };
   }
 }

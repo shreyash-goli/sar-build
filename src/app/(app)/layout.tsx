@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { readShellContext } from "@/components/layout/shell-context";
 import { ToastProvider } from "@/components/ui/toast";
 import { loadAlerts } from "@/lib/alerts/load";
+import { logServerError } from "@/lib/security/redact";
 
 export default async function AppLayout({
   children,
@@ -18,7 +19,7 @@ export default async function AppLayout({
   const alertActiveCount = await loadAlerts({ view: "active" })
     .then((a) => a.counts.active)
     .catch((error: unknown) => {
-      console.error("[shell] alerts unavailable", error);
+      logServerError("shell", error);
       return null;
     });
 

@@ -12,7 +12,7 @@ import {
 
 import type { IncidentDetail } from "@/lib/incidents/schema";
 import { formatCents } from "@/lib/schema/money";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { PROVENANCE_TONE_VARIANT } from "@/components/ui/provenance-tone";

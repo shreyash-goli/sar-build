@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Bell, BellOff, CheckCheck, Clock, X } from "lucide-react";
 
 import { ALERT_CHANNEL_NOTICE, type AlertListData, type AlertView } from "@/lib/alerts/schema";
-import { formatUtc } from "@/components/layout/shell-status";
+import { formatUtc } from "@/components/layout/format-utc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
