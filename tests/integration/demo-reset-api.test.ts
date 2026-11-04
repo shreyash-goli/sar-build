@@ -111,6 +111,20 @@ describe("authorized local reset", () => {
     expect((await reset({ host: "[fd00::1]:3000" }, env)).status).toBe(200);
     expect((await reset({ host: "evil.local:3000" }, env)).status).toBe(403);
   });
+
+  it("wildcard entries are rejected, never treated as patterns", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { allowedResetHosts } = await import("@/app/api/_lib/demo-reset");
+    const env = { ...DEMO, DEMO_RESET_ALLOWED_HOSTS: "*, *.lan, demo?.lan, http://*:3000, box.lan" };
+    expect([...allowedResetHosts(env)].sort()).toEqual(["127.0.0.1", "::1", "box.lan", "localhost"]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("wildcard"), "*, *.lan, demo?.lan, http://*:3000");
+    for (const host of ["anything.example", "demo.lan", "demo1.lan", "evil.com:3000"]) {
+      expect((await reset({ host }, env)).status, host).toBe(403);
+    }
+    expect((await reset({ host: "box.lan" }, env)).status).toBe(200);
+    expect((await reset({ host: "anything" }, { ...DEMO, DEMO_RESET_ALLOWED_HOSTS: "*" })).status).toBe(403);
+    warn.mockRestore();
+  });
 });
 
 describe("refusals (nothing changes)", () => {

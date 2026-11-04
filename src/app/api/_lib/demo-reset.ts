@@ -33,12 +33,24 @@ function hostnameOf(value: string): string | null {
   }
 }
 
-/** Loopback plus DEMO_RESET_ALLOWED_HOSTS, each entry normalized like the request Host (scheme/port stripped, lowercased). */
+/** Wildcards are not supported: "*", "*.lan", "demo?.lan" etc. are ignored (fail closed), never treated as patterns. */
+const WILDCARD = /[*?]/;
+
+/**
+ * Loopback plus DEMO_RESET_ALLOWED_HOSTS, each entry normalized like the request Host
+ * (scheme/port stripped, lowercased). Entries with wildcard characters are rejected.
+ */
 export function allowedResetHosts(env: Env): Set<string> {
-  const extra = (env.DEMO_RESET_ALLOWED_HOSTS ?? "")
+  const entries = (env.DEMO_RESET_ALLOWED_HOSTS ?? "")
     .split(",")
     .map((h) => h.trim())
-    .filter(Boolean)
+    .filter(Boolean);
+  const wildcards = entries.filter((h) => WILDCARD.test(h));
+  if (wildcards.length > 0) {
+    console.warn("[demo-reset] ignoring DEMO_RESET_ALLOWED_HOSTS wildcard entries (exact hostnames only):", wildcards.join(", "));
+  }
+  const extra = entries
+    .filter((h) => !WILDCARD.test(h))
     .map(hostnameOf)
     .filter((h): h is string => h !== null && h !== "");
   return new Set([...LOOPBACK, ...extra]);
