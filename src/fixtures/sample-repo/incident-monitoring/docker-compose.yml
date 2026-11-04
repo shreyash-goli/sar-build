@@ -1,0 +1,10 @@
+# FICTIONAL sample for the FailSafe demo. Parsed as text only.
+services:
+  monitor:
+    build: .
+    ports:
+      - "8080:8080"
+  status-agent:
+    image: webhookworks/agent:2.1
+  db:
+    image: "postgres:16"

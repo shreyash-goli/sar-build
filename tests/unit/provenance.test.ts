@@ -148,6 +148,8 @@ describe("evidence records", () => {
     expect(parse("MANIFEST", "EXTERNAL_OBSERVED")).toBe(true);
     expect(parse("MANIFEST", "MODEL_SUGGESTED")).toBe(true);
     expect(parse("MANIFEST", "DERIVED")).toBe(false);
+    expect(parse("MANIFEST", "DEMO_FIXTURE")).toBe(true); // manifest imported into the fictional demo workspace
+    expect(parse("MANIFEST", "UNKNOWN")).toBe(false);
   });
 
   it("model evidence is never observed or derived, for any method mapping", () => {
