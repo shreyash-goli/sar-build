@@ -2,7 +2,8 @@
 
 > Prototype: "PagerDuty for financial dependencies." **Not an official Ramp product.**
 > All bundled data is fictional (`DEMO_FIXTURE`, the Northstar Labs workspace). No live funds,
-> cards or Ramp data are ever read or changed. Every simulated action is labeled `SIMULATION ONLY`.
+> cards or Ramp data are ever changed; Ramp sandbox data is only *read*, and only if you configure the
+> optional adapter (FS-18). Every simulated action is labeled `SIMULATION ONLY`.
 
 FailSafe detects when a payment issue could put a critical business workflow at risk, explains
 the operational blast radius through a source-backed dependency graph, and lets a human approve a
@@ -68,6 +69,7 @@ pnpm build && pnpm start:local   # next start --hostname 127.0.0.1 → http://12
 | `pnpm db:deploy` / `pnpm db:migrate` | Apply migrations / create a migration during development |
 | `pnpm db:seed` | Transactional "ensure" seed; never overwrites drifted rows (use `demo:reset`) |
 | `pnpm demo:reset` | Restore the demo: clears all data, reseeds, regenerates incidents and alerts |
+| `pnpm ramp:init --confirm` | Optional: clear all data and create an empty read-only Ramp sandbox workspace (FS-18) |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test` | ESLint / `tsc` (after typegen) / Vitest unit + integration |
 | `pnpm test:e2e` | Playwright; builds and serves on `:3100` with its own `e2e-3100.db`. Run `pnpm exec playwright install chromium` once. |
 | `pnpm check:provenance` | Read-only audit: fails on dangling evidence, unjustified confirmed edges, unreadable incidents or assertions without inputs |
@@ -88,7 +90,8 @@ Prisma 7 + SQLite (libSQL adapter), Zod 4, Vitest, Playwright.
 - `src/lib/simulations`, `src/lib/actions` — counterfactual engine on a cloned snapshot;
   approval-gated proposals with an immutable audit trail; runbooks.
 - `src/lib/alerts` — in-app alerts on material risk transitions.
-- `src/lib/providers` — safe static manifest discovery (no execution, no network).
+- `src/lib/providers` — safe static manifest discovery (no execution, no network); optional AI
+  suggestions and read-only Ramp sandbox adapter (network only when configured).
 
 ## Data and safety disclaimers
 
@@ -99,9 +102,39 @@ Prisma 7 + SQLite (libSQL adapter), Zod 4, Vitest, Playwright.
 - Risk is *potential* impact through confirmed dependencies, not a prediction that a vendor will
   suspend service.
 - Alerts are **in-app only**; nothing is sent by email, Slack or webhook.
-- **Not implemented in this MVP:** a read-only Ramp sandbox adapter (FS-18) and AI-assisted edge
-  suggestions (FS-19). The app makes no network calls and has no integration settings; the
-  `RAMP_*` and `LLM_*` variables in `.env.example` are unused placeholders.
+- **AI-assisted suggestions (FS-19) are optional and OFF by default.** With `LLM_API_KEY` and
+  `LLM_MODEL` set (an OpenAI-style chat-completions endpoint via `LLM_BASE_URL`, tested with mocked
+  responses only; the server must support JSON mode via `response_format`), a manifest import with
+  `suggester: "ai"` asks the model to map parsed dependency references to known vendors. Only
+  references that match the built-in provider list are sent (file name, line, the reference, and its
+  version only when it is plain semver-like, such as `^1.2.3`; prerelease/build tags and
+  git/URL/`file:`/`workspace:` specs are omitted and URL credentials stripped). Other references
+  never leave the process (counted as `suggester.omittedFindings`), and file contents and secrets
+  are never sent. Output is schema-validated; anything not grounded in a real finding, a provider
+  the built-in taxonomy assigns to that exact reference, and a matching vendor node is rejected, so
+  the model can explain known mappings but never introduce new ones. In AI mode, rules matches the
+  model did not return are not suggested (run a rules import to see them). AI suggestions are stored
+  as `SUGGESTED` edges with `MODEL_SUGGESTED` evidence and count only after human review. Without a
+  key the API answers `AI OFF` (HTTP 503 for `suggester: "ai"`), `GET /api/integrations/ai/status`
+  reports `AI_OFF`, and a model failure is reported as `AI_ERROR` with an explicitly labelled rules
+  fallback. Without a key the app makes no network calls.
+- **Read-only Ramp sandbox adapter (FS-18) is optional and NOT CONNECTED by default.** With
+  `RAMP_CLIENT_ID`/`RAMP_CLIENT_SECRET` set, `POST /api/integrations/ramp/sync` reads funds, cards
+  and transactions (including declines) from `https://demo-api.ramp.com` with read-only scopes
+  (`transactions:read cards:read funds:read`), using only GET requests plus the OAuth token request.
+  It never requests card vault scopes and refuses any card payload containing PAN/CVV-like fields.
+  Only the sandbox host is supported in this MVP: any other `RAMP_API_BASE_URL` (including
+  production) is `NOT_CONFIGURED`. Sync runs only in a separate, empty `RAMP_SANDBOX` workspace
+  created by `pnpm ramp:init --confirm` (this clears the demo; restore it with `pnpm demo:reset`),
+  so demo and Ramp data are never mixed. Ramp records are stored as `RAMP_SANDBOX` API evidence;
+  unknown values stay unknown (available balance, billing method), and fund→card→vendor links are
+  `SUGGESTED` until reviewed. Partial reads are reported as `PARTIAL` with per-resource errors,
+  never as success (an overall `FAILED` sync is HTTP 502), and there is no fallback to demo data.
+  Without credentials, `GET /api/integrations/ramp/status` reports `NOT_CONFIGURED` and sync returns
+  HTTP 503 without any network call. **Live sandbox sync is BLOCKED/untested:** it is verified only
+  against a mocked Ramp API, as no sandbox credentials were available. The card-secret key scan
+  matches generic field names (e.g. `number`, `expiration`, `pin`), so it could refuse real card
+  payloads; that fails safe (cards are not stored), but it is untested against real Ramp data.
 
 ## Known limitations
 

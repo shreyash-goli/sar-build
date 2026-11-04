@@ -15,6 +15,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "demo:reset": "tsx --env-file-if-exists=.env scripts/reset-demo.ts --default-demo-mode",
+    "ramp:init": "tsx --env-file-if-exists=.env scripts/ramp-init.ts",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "postinstall": "prisma generate",
     "start:local": "next start --hostname 127.0.0.1",
