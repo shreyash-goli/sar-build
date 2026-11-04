@@ -35,7 +35,10 @@ beforeAll(() => {
     stdio: "pipe",
   });
   db = createDbClient(url);
-  repos = createRepositories(db, { writeGate: () => assertWritesAllowed({ env: { DEMO_MODE: "true" } }) });
+  repos = createRepositories(db, {
+    writeGate: () => assertWritesAllowed({ env: { DEMO_MODE: "true" } }),
+    demoResetGate: () => undefined,
+  });
 }, 60_000);
 
 afterAll(async () => {
@@ -567,6 +570,30 @@ describe("incident deletion is demo-reset only", () => {
     expect(await repos.actionProposals.list()).toEqual([]);
     // Evidence is untouched by the cascade.
     expect(await repos.evidence.findById("ev-inc")).not.toBeNull();
+  });
+});
+
+describe("deleteForDemoReset requires demo mode, not just write access", () => {
+  it("an admin token outside demo mode cannot delete incidents (default demo-reset gate)", async () => {
+    await seedBasics();
+    await seedIncident();
+    const token = "a-very-long-admin-token-1234";
+    const prev = process.env.DEMO_MODE;
+    process.env.DEMO_MODE = "false";
+    try {
+      const admin = createRepositories(db, {
+        writeGate: () => assertWritesAllowed({ adminToken: token, env: { DEMO_MODE: "false", ADMIN_TOKEN: token } }),
+      });
+      // The admin token does grant ordinary writes...
+      await expect(admin.workspaces.create({ id: "ws-admin", name: "N", mode: "DEMO" })).resolves.toBeTruthy();
+      // ...but not incident deletion.
+      await expect(admin.incidents.deleteForDemoReset("inc-1")).rejects.toBeInstanceOf(WriteForbiddenError);
+      await expect(admin.demoReset.clearAllData()).rejects.toBeInstanceOf(WriteForbiddenError);
+      expect(await repos.incidents.findById("inc-1")).not.toBeNull();
+    } finally {
+      if (prev === undefined) delete process.env.DEMO_MODE;
+      else process.env.DEMO_MODE = prev;
+    }
   });
 });
 
