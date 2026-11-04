@@ -10,7 +10,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient, type PrismaClient } from "@/lib/db";
 import { seedNorthstarDemo } from "@/lib/demo/northstar";
 import { checkProvenance } from "@/lib/provenance/check";
-import { createReadOnlyRepositories } from "@/lib/provenance/ledger";
 import { createRepositories } from "@/lib/repositories";
 
 const ROOT = resolve(__dirname, "../..");
@@ -80,6 +79,10 @@ beforeAll(async () => {
   const dsnap = JSON.parse(decline.snapshotJson) as { evaluation: { assertion: { inputs: string[] } } };
   dsnap.evaluation.assertion.inputs.push("evidence:ev-deleted-record");
   await bad.$executeRawUnsafe(`UPDATE "Incident" SET "snapshotJson" = ? WHERE "id" = ?`, JSON.stringify(dsnap), decline.id);
+  // Schema-invalid rows: an evidence kind/classification mismatch (FIXTURE must be DEMO_FIXTURE)
+  // and an enum value the schema does not know. The typed client would throw on these reads.
+  await bad.$executeRawUnsafe(`UPDATE "EvidenceRecord" SET "classification" = 'EXTERNAL_OBSERVED' WHERE "id" = 'ev-fund-auth'`);
+  await bad.$executeRawUnsafe(`UPDATE "Edge" SET "relation" = 'CAUSES' WHERE "id" = 'edge-fund-auth--card-auth'`);
   await bad.$disconnect();
 }, 90_000);
 
@@ -95,14 +98,14 @@ describe("check:provenance", () => {
       "check:provenance OK (evidence=53 funding_source=3 payment_instrument=3 vendor=4 vendor_charge=3 transaction=3 node=18 edge=15 incident=4)",
     );
     const db = createDbClient(`file:${cleanPath}`);
-    expect((await checkProvenance(createReadOnlyRepositories(db))).problems).toEqual([]);
+    expect((await checkProvenance(db)).problems).toEqual([]);
     await db.$disconnect();
   }, 60_000);
 
   it("fails on a corrupted copy (exit 1) and lists every problem", async () => {
     const r = runScript(corruptPath);
     expect(r.code, r.out).toBe(1);
-    expect(r.out).toMatch(/check:provenance FAILED: 6 problem\(s\)/);
+    expect(r.out).toMatch(/check:provenance FAILED: 8 problem\(s\)/);
     for (const line of [
       "[EVIDENCE_MISSING] VENDOR_CHARGE charge-computeharbor-20261121: cites missing evidence ev-also-missing",
       "[EVIDENCE_MISSING] NODE node-service-otp-gateway: cites missing evidence ev-does-not-exist",
@@ -110,11 +113,32 @@ describe("check:provenance", () => {
       "[INCIDENT_SNAPSHOT_INVALID] INCIDENT inc-charge-computeharbor-20261121: snapshot does not parse",
       "[INCIDENT_SNAPSHOT_INVALID] INCIDENT inc-charge-cloudcomms-20261119: snapshot does not parse: evaluation.assertion.inputs",
       "[INCIDENT_INPUT_MISSING] INCIDENT inc-tx-webhookworks-20261116: assertion risk-transaction-tx-webhookworks-20261116 cites missing evidence: ev-deleted-record",
+      "[SCHEMA_INVALID] EVIDENCE ev-fund-auth: row does not match its schema: classification: classification is not allowed for this evidence kind",
+      "[SCHEMA_INVALID] EDGE edge-fund-auth--card-auth: row does not match its schema: relation:",
     ]) {
       expect(r.out, line).toContain(line);
     }
     expect(r.out).toContain("unverified MODEL_SUGGESTED (MODEL) evidence is only allowed for synthetic FIXTURE/DEMO_FIXTURE demo data");
     expect(r.out).toContain("(evidence ev-model-unreviewed)");
+  }, 60_000);
+
+  it("schema-invalid rows are itemized (not fatal); other checks still run", async () => {
+    const db = createDbClient(`file:${corruptPath}`);
+    const report = await checkProvenance(db);
+    await db.$disconnect();
+    expect(report.problems.filter((p) => p.code === "SCHEMA_INVALID").map((p) => [p.subjectType, p.subjectId])).toEqual([
+      ["EVIDENCE", "ev-fund-auth"],
+      ["EDGE", "edge-fund-auth--card-auth"],
+    ]);
+    // The schema-invalid evidence still EXISTS, so fund-auth is not also reported as citing missing evidence.
+    expect(report.problems.some((p) => p.code === "EVIDENCE_MISSING" && p.subjectId === "fund-auth")).toBe(false);
+    expect(report.checked).toMatchObject({ EVIDENCE: 54, EDGE: 15 });
+  });
+
+  it("exit 2 is reserved for real I/O failures (unreachable database)", () => {
+    const r = runScript(join(dir, "no-such-dir", "missing.db"));
+    expect(r.code, r.out).toBe(2);
+    expect(r.out).toMatch(/check:provenance could not run/);
   }, 60_000);
 
   it("is read-only: running it does not change the database", async () => {

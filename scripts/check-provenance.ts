@@ -5,12 +5,11 @@
  */
 import { createDbClient } from "@/lib/db";
 import { checkProvenance, formatProvenanceReport } from "@/lib/provenance/check";
-import { createReadOnlyRepositories } from "@/lib/provenance/ledger";
 
 async function main(): Promise<number> {
   const db = createDbClient();
   try {
-    const report = await checkProvenance(createReadOnlyRepositories(db));
+    const report = await checkProvenance(db);
     const text = formatProvenanceReport(report);
     if (report.ok) console.log(text);
     else console.error(text);
