@@ -174,6 +174,28 @@ enum SimulationPatchKind {
   MARK_DEPENDENCY_VERIFIED
 }
 
+enum RiskCategory {
+  PROJECTED_SHORTFALL
+  OBSERVED_DECLINE
+  UNKNOWN_DATA
+  NO_RISK
+}
+
+/// FS-20 in-app alert transition kinds.
+enum AlertKind {
+  CREATED
+  REOPENED
+  ESCALATED
+  DEESCALATED
+  RECLASSIFIED
+  RESOLVED
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+}
+
 enum ActionProposalState {
   DRAFT
   PENDING_APPROVAL
@@ -361,6 +383,7 @@ model Incident {
   evidence        EvidenceRecord   @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
   simulations     Simulation[]
   actionProposals ActionProposal[]
+  alerts          Alert[]
 
   @@index([status, severity])
   @@index([primaryVendorId])
@@ -411,4 +434,39 @@ model AuditEvent {
 
   @@index([subjectId, at])
   @@index([at])
+}
+
+/// FS-20 in-app alert on a material risk transition. In-app only: never sent externally.
+/// Created inside the risk engine's transaction; removed with its incident (demo reset).
+/// No delete helper; ack/snooze are the only updates.
+model Alert {
+  id               String        @id
+  /// incidentId:kind:fromFingerprint->toFingerprint#occurrence (dedupe guard).
+  alertKey         String        @unique
+  /// Monotonic order (the demo clock makes createdAt tie).
+  seq              Int           @unique
+  incidentId       String
+  kind             AlertKind
+  severity         Severity
+  previousSeverity Severity?
+  category         RiskCategory?
+  previousCategory RiskCategory?
+  title            String
+  message          String
+  source           String
+  owner            String?
+  link             String
+  fromFingerprint  String?
+  toFingerprint    String?
+  createdAt        DateTime
+  status           AlertStatus
+  acknowledgedBy   String?
+  acknowledgedAt   DateTime?
+  snoozedUntil     DateTime?
+  snoozedBy        String?
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, seq])
+  @@index([status])
 }

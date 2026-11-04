@@ -38,6 +38,7 @@ import {
 } from "@/lib/schema";
 import { isDemoModeEnabled } from "@/lib/env";
 import { WriteForbiddenError, assertRequestWritesAllowed } from "@/lib/security/write-gate";
+import { AlertSchema, type Alert } from "@/lib/alerts/schema";
 import { appendOnlyRepository, decoder, mutableRepository, type WriteGate } from "./base";
 import { checkEdgeEvidence } from "./edge-policy";
 import { ConflictError, NotFoundError, ProvenanceViolationError, RepositoryError, parseOrThrow } from "./errors";
@@ -522,6 +523,52 @@ export function createRepositories(db: DbClient, options: RepositoryOptions) {
     },
   });
 
+  // ---- Alerts (FS-20): no delete helper; removed only with their incident (demo reset cascade).
+  // Ack/snooze are the only updates. ----
+  const alertCodec = {
+    entity: "Alert",
+    schema: AlertSchema,
+    toData: (a: Alert): Prisma.AlertUncheckedCreateInput => ({
+      ...a,
+      createdAt: toDate(a.createdAt),
+      acknowledgedAt: toDateOrNull(a.acknowledgedAt),
+      snoozedUntil: toDateOrNull(a.snoozedUntil),
+    }),
+    fromRow: (r: Prisma.AlertGetPayload<object>) => ({
+      ...r,
+      createdAt: fromDate(r.createdAt),
+      acknowledgedAt: fromDateOrNull(r.acknowledgedAt),
+      snoozedUntil: fromDateOrNull(r.snoozedUntil),
+    }),
+  };
+  const alertBase = mutableRepository(
+    alertCodec,
+    {
+      create: (data) => db.alert.create({ data }),
+      findUnique: (id) => db.alert.findUnique({ where: { id } }),
+      findMany: () => db.alert.findMany({ orderBy: { seq: "desc" } }),
+      update: (id, data) => db.alert.update({ where: { id }, data }),
+      delete: (id) => db.alert.delete({ where: { id } }),
+    },
+    writeGate,
+  );
+  const decodeAlert = decoder(alertCodec);
+  const { delete: _noAlertDelete, ...alertRest } = alertBase;
+  void _noAlertDelete;
+  const alerts = Object.freeze({
+    ...alertRest,
+    async findByAlertKey(alertKey: string): Promise<Alert | null> {
+      const row = await db.alert.findUnique({ where: { alertKey } });
+      return row === null ? null : decodeAlert(row);
+    },
+    async listByIncident(incidentId: string): Promise<Alert[]> {
+      return (await db.alert.findMany({ where: { incidentId }, orderBy: { seq: "desc" } })).map(decodeAlert);
+    },
+    async maxSeq(): Promise<number> {
+      return (await db.alert.aggregate({ _max: { seq: true } }))._max.seq ?? 0;
+    },
+  });
+
   /**
    * Named demo-reset path: the ONLY way evidence, audit events and fixture rows
    * are removed. Requires the write gate AND the demo-reset gate. Incidents are
@@ -555,6 +602,7 @@ export function createRepositories(db: DbClient, options: RepositoryOptions) {
   });
 
   return Object.freeze({
+    alerts,
     demoReset,
     workspaces,
     evidence,

@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import type { Repositories } from "@/lib/repositories";
 import { RiskEvaluationSchema, type EvidenceRecord, type Incident, type Severity } from "@/lib/schema";
 import { evaluateRisk, type RiskFinding } from "@/lib/risk";
+import { recordAlertForTransition, type RiskState } from "@/lib/alerts/transitions";
 import { isEscalation, nextIncidentStatus } from "./status";
 
 export const INCIDENT_SNAPSHOT_VERSION = 1;
@@ -79,6 +80,26 @@ export type MaterializeSummary = {
   resolved: string[];
   ruleEvidenceCreated: string[];
 };
+
+/** Prior risk state of a stored incident, for alert transitions (FS-20). */
+function stateOf(inc: Incident): RiskState {
+  const snap = (inc.snapshotJson ?? null) as { evaluation?: { category?: unknown }; fingerprint?: unknown } | null;
+  const category = snap?.evaluation?.category;
+  return {
+    status: inc.status,
+    severity: inc.severity,
+    category: typeof category === "string" ? (category as RiskState["category"]) : null,
+    fingerprint: typeof snap?.fingerprint === "string" ? snap.fingerprint : null,
+  };
+}
+
+async function ownerFor(repos: Repositories, workflowIds: readonly string[], vendorId: string | null): Promise<string | null> {
+  for (const id of workflowIds) {
+    const owner = (await repos.nodes.findById(id))?.owner;
+    if (owner) return owner;
+  }
+  return vendorId ? ((await repos.nodes.findById(`node-${vendorId}`))?.owner ?? null) : null;
+}
 
 export async function evaluateWorkspaceRisk(repos: Repositories, now: Date): Promise<RiskFinding[]> {
   const [nodes, edges, vendors, fundingSources, charges, transactions, evidence] = await Promise.all([
@@ -207,6 +228,18 @@ export async function materializeIncidents(repos: Repositories, now: Date): Prom
       await repos.incidents.update(existing.id, patch);
       summary.updated.push(existing.id);
     }
+    if (!existing || !sameIncident(existing, next)) {
+      await recordAlertForTransition(repos, {
+        incidentId: next.id,
+        incidentTitle: next.title,
+        previousTitle: existing?.title ?? null,
+        ruleId: evaluation.assertion.ruleId,
+        owner: await ownerFor(repos, f.impact.confirmedWorkflows.map((w) => w.nodeId), next.primaryVendorId),
+        prev: existing ? stateOf(existing) : null,
+        next: { status: next.status, severity: next.severity, category: evaluation.category, fingerprint },
+        at: evaluatedAt,
+      });
+    }
   }
 
   // Subjects no longer evaluated: resolve, keep history.
@@ -219,6 +252,17 @@ export async function materializeIncidents(repos: Repositories, now: Date): Prom
       snapshotJson: { ...prev, resolution: "SUBJECT_NO_LONGER_EVALUATED" } as Incident["snapshotJson"],
     });
     summary.resolved.push(inc.id);
+    const before = stateOf(inc);
+    await recordAlertForTransition(repos, {
+      incidentId: inc.id,
+      incidentTitle: inc.title,
+      previousTitle: inc.title,
+      ruleId: inc.detectionRule,
+      owner: await ownerFor(repos, [], inc.primaryVendorId),
+      prev: before,
+      next: { ...before, status: "RESOLVED" },
+      at: evaluatedAt,
+    });
   }
 
   return summary;
