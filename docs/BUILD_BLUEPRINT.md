@@ -437,14 +437,14 @@ Given a financial starting node, BFS/DFS over directed `CONFIRMED` edges only, w
 **Done when:** App launches with a visible `FailSafe / Demo` starter screen; standard scripts exist and no keys are required.  
 **Verify:** `pnpm install && pnpm lint && pnpm typecheck && pnpm build`.
 
-### [ ] FS-01 — Establish design system and navigation
+### [x] FS-01 — Establish design system and navigation
 **Depends on:** FS-00.  
 **Build:** Responsive app shell, navigation, mode chip, theme, generic page headers, skeletons, notification/toast, consistent spacing and typography. Ensure keyboard focus and color contrast. Make routes load for Overview, Graph, Incidents, Response Studio, Sources. No placeholder pretend charts.  
 **Files:** `src/app/(app)/**`, `src/components/layout/**`, `src/app/globals.css`.  
 **Done when:** Every route loads and visually belongs to the same premium product; empty states explicitly say there is no data.  
 **Verify:** `pnpm build`; manually test keyboard tab navigation and narrow viewport.
 
-### [ ] FS-02 — Implement provenance and data-contract types
+### [x] FS-02 — Implement provenance and data-contract types
 **Depends on:** FS-00.  
 **Build:** Typed Zod schemas for source types, evidence records, financial objects, graph nodes/edges, risk outputs and simulation patches. Centralize display of `DEMO_FIXTURE`, `RAMP_SANDBOX`, `EXTERNAL_OBSERVED`, `MODEL_SUGGESTED`, `DERIVED`, `UNKNOWN`. Add strict null handling for missing values.  
 **Files:** `src/lib/schema/**`, `src/lib/provenance/**`, `tests/unit/provenance.test.ts`.  

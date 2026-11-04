@@ -1,15 +1,17 @@
 # Progress
 
 ## Now
-- FS-01 — design system & navigation (@frontend, in progress)
-- FS-02 — provenance & data-contract types (@backend, in progress)
+- FS-03 — persistent normalized database (@backend, in progress)
+- FS-01 follow-up — shared provenance labels in mode chip, mobile freshness, invalid-clock label (@frontend, in progress)
 
 ## Next
-- FS-03 — persistent normalized database (after FS-02)
+- FS-04 seed (after FS-03) → FS-05 → FS-06; FS-10 after FS-04
 - FS-07 needs FS-06 + FS-01; FS-12 needs FS-11 + FS-01
 
 ## Done
 - FS-00 — runnable repository (commit c7ec96f)
+- FS-01 — design system & navigation (commit 647d66c)
+- FS-02 — provenance & data-contract types (commit 10d2d07)
 
 ## Blockers
 - None
@@ -29,3 +31,25 @@
 - Limitations: `db:seed`, `demo:reset`, `check:provenance` are script slots that fail until FS-03/FS-04/FS-21; shadcn components not yet generated (config only); no tests yet.
 - Commit: c7ec96f
 - Next: FS-01 and FS-02 (parallel)
+
+## FS-01 — 2026-11-03
+- Status: PASS
+- Implemented: (app) route group with shared shell for Overview (/dashboard), Dependency Graph (/graph), Incidents (/incidents), Response Studio (/scenarios), Sources (/sources); / redirects to /dashboard. Sidebar with active state, collapse, mobile drawer (focus trap, Escape, focus return), skip link. Top bar mode chip derived server-side from DEMO_MODE ("DEMO DATA" / "NO SOURCE CONNECTED"; sandbox not representable), "No data loaded" freshness, labeled demo clock. Dark navy theme tokens, global focus ring, reduced motion. Primitives: Button, Badge, Card, Skeleton, EmptyState, PageHeader, Toast provider; loading.tsx per route, (app) error boundary.
+- Files: src/app/{globals.css,layout.tsx,page.tsx}, src/app/(app)/**, src/components/ui/**, src/components/layout/**, tests/e2e/shell.spec.ts.
+- Commands: pnpm lint PASS; pnpm typecheck PASS; pnpm build PASS (5 dynamic routes); pnpm test:e2e 16/16 PASS (builder and QA independently).
+- QA: PASS. QA probes: chip under DEMO_MODE true/unset/invalid DEMO_NOW; no horizontal overflow at 320/390/1280px on all routes; drawer Tab trap; lowest text contrast 4.61:1 (AA); zero console errors; every control functional; no hardcoded metrics.
+- UX evidence: all 5 routes render consistent shell with honest empty state "No data loaded yet".
+- Limitations (non-blocking QA findings, follow-up in progress): mobile top bar hides freshness (<640px); invalid DEMO_NOW silently hides clock; toast system has no real caller yet so is untested; error-boundary retry untested.
+- Commit: 647d66c
+- Next: FS-07/FS-12 once their backend deps land
+
+## FS-02 — 2026-11-03
+- Status: PASS
+- Implemented: Zod v4 contracts in src/lib/schema (enums, primitives, money, evidence, domain, graph, risk, simulation, api). Unknown money = null, never 0; null-preserving add/subtract/compare return UNKNOWN; integer-cent formatter renders null as "Unknown". Edge requires evidenceId; ImportEdge only SUGGESTED; self-loops rejected. PaymentInstrument strict (PAN/CVV keys rejected), PAN-shaped externalCardId rejected. Evidence kind↔classification constrained (FIXTURE→DEMO_FIXTURE, MODEL→MODEL_SUGGESTED, RULE→DERIVED). RiskAssertion matches runtime provenance contract; every assertion cites ≥1 input except UNKNOWN-with-limitations. SimulationPatch strict 4-kind union, positive integer amounts, client risk scores rejected. Centralized SOURCE_CLASS_DISPLAY + getSimulationBadge in src/lib/provenance. Test wrapper scripts/vitest.mjs makes `pnpm test -- <filter>` filter and fail on zero matches.
+- Files: src/lib/schema/*.ts, src/lib/provenance/{display,index}.ts, tests/unit/{provenance,money,schema}.test.ts, scripts/vitest.mjs, package.json (test script).
+- Source inputs: BUILD_BLUEPRINT.md sections 2, 4, 5.
+- Commands: pnpm test 96/96 PASS; pnpm test -- provenance 39/39 PASS; pnpm test -- nonexistentfilter exits 1 (intended); pnpm lint PASS; tsc --noEmit PASS.
+- QA: initial PASS with 1 Medium + 4 Low → all fixed → re-verify PASS.
+- Limitations: PAN embedded inside a longer ID string is not detected (anchored pattern); CONFIRMED-edge-with-unreviewed-model-evidence check deferred to FS-03 repository layer.
+- Commit: 10d2d07
+- Next: FS-03
