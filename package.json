@@ -17,7 +17,8 @@
     "demo:reset": "tsx --env-file-if-exists=.env scripts/reset-demo.ts --default-demo-mode",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "postinstall": "prisma generate",
-    "start:local": "next start --hostname 127.0.0.1"
+    "start:local": "next start --hostname 127.0.0.1",
+    "demo:setup": "pnpm db:deploy && pnpm db:seed"
   },
   "packageManager": "pnpm@12.16.1",
   "dependencies": {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Brand } from "./brand";
 import { ModeChip } from "./mode-chip";
+import { ResetDemoButton } from "./reset-demo";
 import type { ShellFreshness } from "./shell-freshness";
 import type { DemoClock, ShellMode } from "./shell-status";
 import { SidebarNav } from "./sidebar-nav";
@@ -15,6 +16,8 @@ export type AppShellProps = {
   mode: ShellMode;
   /** Secondary note next to the chip, e.g. "Demo mode off · read-only". */
   modeHint: string | null;
+  /** Show the "Reset demo" control (DEMO_MODE on). The server still enforces it. */
+  canResetDemo?: boolean;
   /** Injected demo clock (valid or explicitly invalid), or null when unset. */
   demoClock: DemoClock | null;
   /** Source freshness derived server-side from the database. */
@@ -28,6 +31,7 @@ const FOCUSABLE =
 export function AppShell({
   mode,
   modeHint,
+  canResetDemo = false,
   demoClock,
   freshness,
   children,
@@ -145,6 +149,7 @@ export function AppShell({
               </>
             )}
           </Button>
+          {canResetDemo ? <ResetDemoButton compact={collapsed} /> : null}
         </div>
       </div>
 
@@ -187,6 +192,11 @@ export function AppShell({
               <p className="leading-relaxed">
                 Prototype. Not an official Ramp product.
               </p>
+              {canResetDemo ? (
+                <div className="-ml-3">
+                  <ResetDemoButton onDone={() => setMobileOpen(false)} />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

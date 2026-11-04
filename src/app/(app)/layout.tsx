@@ -21,6 +21,7 @@ export default async function AppLayout({
         modeHint={shell.chip.hint}
         demoClock={shell.demoClock}
         freshness={shell.freshness}
+        canResetDemo={shell.demoModeEnabled}
       >
         {children}
       </AppShell>

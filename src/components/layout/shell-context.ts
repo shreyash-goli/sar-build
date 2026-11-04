@@ -10,6 +10,8 @@ export type ShellContext = {
   chip: ChipState;
   freshness: ShellFreshness;
   demoClock: DemoClock | null;
+  /** DEMO_MODE on the server: governs writes, including "Reset demo". */
+  demoModeEnabled: boolean;
 };
 
 export async function readShellContext(
@@ -22,5 +24,6 @@ export async function readShellContext(
     chip: resolveChipMode(status, source.workspace),
     freshness: source.freshness,
     demoClock: status.demoClock,
+    demoModeEnabled: status.demoModeEnabled,
   };
 }
