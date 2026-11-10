@@ -8,13 +8,13 @@ import { formatDayUtc } from "./format";
 
 /*
  * Tiny per-vendor charge forecast (small multiples, one series each).
- * Colours validated with the dataviz validator on the dark surface (#0e1524):
+ * Colours validated with the dataviz validator on the dark surface (#FFFFFF):
  * cleared history is the de-emphasis gray, upcoming charges the accent cyan.
  * Unknown amounts are never drawn as $0: no bar, an explicit "Unknown" note,
  * and the table view lists them.
  */
-const CLEARED = "#56657e";
-const UPCOMING = "#2a9fc0";
+const CLEARED = "#888582";
+const UPCOMING = "#17647A";
 
 type Forecast = DashboardData["forecast"][number];
 type Point = Forecast["points"][number];
@@ -97,8 +97,8 @@ function VendorPanel({ forecast }: { forecast: Forecast }) {
             <XAxis
               dataKey="label"
               tickLine={false}
-              axisLine={{ stroke: "#1f2b42" }}
-              tick={{ fill: "#7f8ca3", fontSize: 10 }}
+              axisLine={{ stroke: "#E2DFDB" }}
+              tick={{ fill: "#6E6A65", fontSize: 10 }}
               interval="preserveStartEnd"
             />
             <YAxis hide domain={[0, "dataMax"]} />

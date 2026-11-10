@@ -30,7 +30,7 @@ export function SidebarNav({
               className={cn(
                 "group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
                 active
-                  ? "bg-surface-raised text-foreground"
+                  ? "bg-accent text-accent-foreground"
                   : "text-muted hover:bg-surface-hover hover:text-foreground",
                 collapsed && "justify-center px-0",
               )}
@@ -46,7 +46,7 @@ export function SidebarNav({
                 aria-hidden="true"
                 className={cn(
                   "size-[1.125rem] shrink-0",
-                  active ? "text-accent" : "text-subtle group-hover:text-muted",
+                  active ? "text-accent-foreground" : "text-subtle group-hover:text-muted",
                 )}
               />
               <span className={cn("truncate", collapsed && "sr-only")}>

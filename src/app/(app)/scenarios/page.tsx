@@ -39,16 +39,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
         description="Model a response to an incident and compare the before and after. Simulations run on a copy of the data."
       />
 
-      {/* Always visible: nothing here changes real money. */}
-      <p
-        role="note"
-        data-testid="simulation-banner"
-        className="z-30 flex lg:sticky lg:top-[calc(var(--topbar-height)+0.5rem)] items-center gap-2 rounded-lg border border-warning/50 bg-[color-mix(in_oklab,var(--warning)_14%,var(--background))] px-4 py-2.5 text-sm font-bold text-foreground shadow-lg"
-      >
-        <FlaskConical aria-hidden="true" className="size-4 shrink-0 text-warning" />
-        SIMULATION ONLY: No Ramp funds or card limits were changed.
-      </p>
-
       {list.incidents.length === 0 ? (
         <EmptyState
           icon={FlaskConical}

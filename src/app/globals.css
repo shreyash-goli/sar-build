@@ -2,42 +2,48 @@
 
 /*
  * FailSafe design tokens.
- * Dark navy/charcoal command-center palette with restrained lime (primary)
- * and cyan (informational) accents. All text/background pairings below are
+ * Ramp-inspired light neutral palette with yellow primary accents
+ * and distinct semantic status colors. All text/background pairings below are
  * chosen to meet WCAG 2.1 AA (>= 4.5:1 for body text) on --background and
  * --surface.
  */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --background: #090e18;
-  --surface: #0e1524;
-  --surface-raised: #131c2f;
-  --surface-hover: #18233a;
-  --border: #1f2b42;
-  --border-strong: #2c3b58;
+  --ramp-yellow: #E4F222;
+  --ramp-black: #0C0A08;
+  --ramp-charcoal: #1F1F1F;
+  --ramp-white: #FFFFFF;
+  --ramp-light-gray: #F4F2F0;
 
-  --foreground: #e6edf7; /* ~16:1 on background */
-  --muted: #9aa8bd; /* ~7.9:1 on background */
-  --subtle: #7f8ca3; /* ~5.6:1 on background */
+  --background: var(--ramp-light-gray);
+  --surface: var(--ramp-white);
+  --surface-raised: #F4F2F0;
+  --surface-hover: #EAE8E5;
+  --border: #E2DFDB;
+  --border-strong: #C9C5C0;
 
-  --accent: #b6ef5b; /* lime, primary action / active */
-  --accent-foreground: #0a1206;
-  --accent-soft: rgb(182 239 91 / 0.1);
+  --foreground: var(--ramp-black);
+  --muted: #5F5C58;
+  --subtle: #6E6A65;
 
-  --info: #5fd4ee; /* cyan, informational */
+  --accent: var(--ramp-yellow); /* lime, primary action / active */
+  --accent-foreground: var(--ramp-black);
+  --accent-soft: rgb(228 242 34 / 0.1);
+
+  --info: #17647A; /* cyan, informational */
   --info-soft: rgb(95 212 238 / 0.1);
 
-  --warning: #f5c04e;
+  --warning: #855600;
   --warning-soft: rgb(245 192 78 / 0.1);
 
-  --danger: #f87878;
+  --danger: #A42E2E;
   --danger-soft: rgb(248 120 120 / 0.1);
 
-  --success: #5ee08f;
+  --success: #236B45;
   --success-soft: rgb(94 224 143 / 0.1);
 
-  --ring: #5fd4ee;
+  --ring: #494B00;
 
   --radius: 0.625rem;
   --sidebar-width: 15rem;
@@ -96,7 +102,7 @@
   }
 
   ::selection {
-    background: rgb(95 212 238 / 0.3);
+    background: rgb(228 242 34 / 0.3);
     color: var(--foreground);
   }
 
@@ -122,7 +128,7 @@
 /* Subtle command-center grid behind the main canvas. Decorative only. */
 @utility bg-grid {
   background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+    linear-gradient(to right, rgb(12 10 8 / 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(12 10 8 / 0.025) 1px, transparent 1px);
   background-size: 32px 32px;
 }

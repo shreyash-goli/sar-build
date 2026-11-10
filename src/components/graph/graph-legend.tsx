@@ -15,12 +15,12 @@ export function GraphLegend() {
     </svg>
   );
   const items: { key: string; visual: React.ReactNode; label: string }[] = [
-    { key: "confirmed", visual: line({ stroke: "#7f8ca3" }), label: "Confirmed dependency" },
-    { key: "suggested", visual: line({ stroke: "#7f8ca3", dash: "7 5" }), label: "Suggested (unreviewed, never counted)" },
-    { key: "strength", visual: line({ stroke: "#7f8ca3", width: 3 }), label: "Thicker = harder dependency" },
-    { key: "downstream", visual: line({ stroke: "#b6ef5b", width: 3 }), label: "Selected node's downstream paths" },
-    { key: "upstream", visual: line({ stroke: "#5fd4ee", width: 3 }), label: "Confirmed funding chain feeding it" },
-    { key: "unknown", visual: line({ stroke: "#f5c04e", dash: "7 5" }), label: "Needs mapping: funding lineage unknown (not a risk score)" },
+    { key: "confirmed", visual: line({ stroke: "#6E6A65" }), label: "Confirmed dependency" },
+    { key: "suggested", visual: line({ stroke: "#6E6A65", dash: "7 5" }), label: "Suggested (unreviewed, never counted)" },
+    { key: "strength", visual: line({ stroke: "#6E6A65", width: 3 }), label: "Thicker = harder dependency" },
+    { key: "downstream", visual: line({ stroke: "#6C7300", width: 3 }), label: "Selected node's downstream paths" },
+    { key: "upstream", visual: line({ stroke: "#17647A", width: 3 }), label: "Confirmed funding chain feeding it" },
+    { key: "unknown", visual: line({ stroke: "#855600", dash: "7 5" }), label: "Needs mapping: funding lineage unknown (not a risk score)" },
   ];
   return (
     <section aria-labelledby="legend-title" className="flex flex-col gap-2">

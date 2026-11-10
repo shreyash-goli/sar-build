@@ -14,7 +14,7 @@ export function Brand({
 }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
         <ShieldCheck aria-hidden="true" className="size-[1.125rem]" />
       </span>
       <span

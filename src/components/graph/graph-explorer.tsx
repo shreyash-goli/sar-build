@@ -49,12 +49,12 @@ const edgeTypes = { fs: GraphEdgeComponent };
 
 // Marker colours must be literal values (SVG attributes do not resolve CSS vars).
 const MARKER_COLOR: Record<EdgeEmphasis | "unknown", string> = {
-  none: "#2c3b58",
-  muted: "#2c3b58",
-  confirmed: "#b6ef5b",
-  possible: "#b6ef5b",
-  upstream: "#5fd4ee",
-  unknown: "#f5c04e",
+  none: "#8A8680",
+  muted: "#8A8680",
+  confirmed: "#6C7300",
+  possible: "#6C7300",
+  upstream: "#17647A",
+  unknown: "#855600",
 };
 
 // Map React Flow's theme variables onto FailSafe tokens.
@@ -495,7 +495,7 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
             proOptions={{ hideAttribution: true }}
             aria-label="Dependency graph canvas"
           >
-            <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#22304a" />
+            <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#E2DFDB" />
             <Controls
               showInteractive={false}
               fitViewOptions={{ padding: FIT_PADDING, duration: 300 }}
@@ -506,12 +506,12 @@ function Explorer({ graph, initialNodeId, initialPathId }: GraphExplorerProps) {
               zoomable
               position="bottom-right"
               ariaLabel="Graph overview minimap"
-              bgColor="#0e1524"
+              bgColor="#FFFFFF"
               maskColor="rgb(9 14 24 / 0.65)"
               style={{ width: 150, height: 90 }}
               nodeColor={(n) => {
                 const e = (n as FsNode).data.emphasis;
-                return e === "selected" || e === "confirmed" ? "#b6ef5b" : e === "upstream" ? "#5fd4ee" : "#2c3b58";
+                return e === "selected" || e === "confirmed" ? "#6C7300" : e === "upstream" ? "#17647A" : "#8A8680";
               }}
               nodeStrokeWidth={0}
               className="!hidden md:!block"
